@@ -1004,23 +1004,74 @@ serve(async (req) => {
         // Generate image if enabled
         if (automation.auto_generate_image && automation.client_id) {
           try {
-            // Build image prompt
+            // ===================================================
+            // SMART IMAGE PROMPT: Based on generated content + visual identity
+            // ===================================================
             let imagePrompt = '';
+            
+            // Fetch client visual identity for enriched image prompts
+            let visualIdentity = '';
+            try {
+              const { data: client } = await supabase
+                .from('clients')
+                .select('identity_guide, brand_assets')
+                .eq('id', automation.client_id)
+                .single();
+              
+              if (client?.identity_guide) {
+                // Extract color/visual cues from identity guide
+                const guide = client.identity_guide as string;
+                const colorMatch = guide.match(/(?:cores?|paleta|colors?|palette)[:\s]*([^\n]{10,100})/i);
+                const styleMatch = guide.match(/(?:estilo visual|visual style|estética|aesthetic)[:\s]*([^\n]{10,100})/i);
+                if (colorMatch) visualIdentity += `CORES DA MARCA: ${colorMatch[1].trim()}\n`;
+                if (styleMatch) visualIdentity += `ESTÉTICA DA MARCA: ${styleMatch[1].trim()}\n`;
+              }
+              
+              // Fetch visual references
+              const { data: visualRefs } = await supabase
+                .from('client_visual_references')
+                .select('description, reference_type')
+                .eq('client_id', automation.client_id)
+                .eq('is_primary', true)
+                .limit(3);
+              
+              if (visualRefs && visualRefs.length > 0) {
+                visualIdentity += `REFERÊNCIAS VISUAIS: ${visualRefs.map(v => v.description || v.reference_type).join(', ')}\n`;
+              }
+            } catch (e) {
+              console.warn('Could not fetch visual identity:', e);
+            }
+            
             if (automation.image_prompt_template) {
               imagePrompt = replaceTemplateVariables(
                 automation.image_prompt_template,
                 triggerData,
                 automation.name
               );
+            } else if (generatedContent) {
+              // Build contextual prompt from generated content
+              const contentSummary = generatedContent.substring(0, 200).replace(/\n/g, ' ');
+              imagePrompt = `Create a powerful visual that captures the essence of this message: "${contentSummary}"`;
             } else {
-              // Default prompt based on content
               const title = triggerData?.title || automation.name;
-              imagePrompt = `Create an image for: ${title}`;
+              imagePrompt = `Create a striking visual for: ${title}`;
             }
             
-            // Add style modifier
+            // Build the enriched image prompt
             const styleModifier = getImageStyleModifier(automation.image_style);
-            const fullImagePrompt = `${imagePrompt}. Style: ${styleModifier}. No text in image.`;
+            const platformFormat = automation.platform === 'twitter' || automation.content_type === 'tweet' ? '1:1 square format for Twitter/X' : '1:1 format';
+            
+            const fullImagePrompt = `${visualIdentity ? `IDENTIDADE VISUAL DO CLIENTE:\n${visualIdentity}\n` : ''}CONTEÚDO DO POST: ${imagePrompt}
+
+ESTILO: ${styleModifier}
+FORMATO: ${platformFormat}
+
+REGRAS ABSOLUTAS:
+- NÃO coloque NENHUM texto, palavra, letra ou número na imagem
+- NO TEXT, NO WORDS, NO LETTERS, NO NUMBERS in the image
+- A imagem deve ser puramente visual, sem elementos tipográficos
+- Composição limpa e profissional
+- Transmita a emoção e conceito do conteúdo visualmente`;
             
             console.log(`Generating image for item ${newItem.id}...`);
             console.log(`Image prompt: ${fullImagePrompt.substring(0, 200)}...`);
