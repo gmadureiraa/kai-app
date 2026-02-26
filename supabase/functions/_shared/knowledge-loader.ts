@@ -690,6 +690,31 @@ export async function getFullContentContext(params: FullContentContextParams & {
     }
   }
   
+  // 3.5. BIBLIOTECA DE REFERÊNCIAS (artigos, inspirações, estudos de caso)
+  try {
+    const { data: references } = await supabase
+      .from("client_reference_library")
+      .select("title, content, reference_type, source_url")
+      .eq("client_id", clientId)
+      .order("created_at", { ascending: false })
+      .limit(5);
+    
+    if (references && references.length > 0) {
+      context += `## 🔬 MATERIAL DE REFERÊNCIA — USE COMO INSPIRAÇÃO CRIATIVA\n`;
+      context += `*Estes são artigos, estudos e referências curados pelo cliente. EXTRAIA insights, dados e perspectivas originais deles. NÃO copie — reinterprete com a voz do cliente.*\n\n`;
+      
+      for (const ref of references) {
+        context += `**${ref.title}** (${ref.reference_type})${ref.source_url ? ` — [fonte](${ref.source_url})` : ''}\n`;
+        context += `\`\`\`\n${(ref.content || '').substring(0, 800)}${(ref.content || '').length > 800 ? '...' : ''}\n\`\`\`\n\n`;
+      }
+      
+      context += `---\n\n`;
+      console.log(`[KNOWLEDGE-LOADER] Loaded ${references.length} reference library items`);
+    }
+  } catch (err) {
+    console.error("[KNOWLEDGE-LOADER] Error fetching reference library:", err);
+  }
+  
   // 4. TOP PERFORMERS (Instagram + YouTube)
   if (includeTopPerformers) {
     const topPerformers: ContentExample[] = [];
