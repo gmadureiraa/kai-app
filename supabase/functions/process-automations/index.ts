@@ -1146,10 +1146,10 @@ serve(async (req) => {
                 if (styleMatch) visualIdentity += `ESTÉTICA DA MARCA: ${styleMatch[1].trim()}\n`;
               }
               
-              // Fetch visual references
+              // Fetch visual references (including image_url for real visual input)
               const { data: visualRefs } = await supabase
                 .from('client_visual_references')
-                .select('description, reference_type')
+                .select('image_url, description, reference_type')
                 .eq('client_id', automation.client_id)
                 .eq('is_primary', true)
                 .limit(3);
@@ -1195,6 +1195,31 @@ REGRAS ABSOLUTAS:
             console.log(`Generating image for item ${newItem.id}...`);
             console.log(`Image prompt: ${fullImagePrompt.substring(0, 200)}...`);
             
+            // Build inputs array: text prompt + visual reference images
+            const imageInputs: any[] = [{
+              type: 'text',
+              content: fullImagePrompt
+            }];
+            
+            // Pass real reference images for style matching
+            if (visualRefs && visualRefs.length > 0) {
+              const supabaseStorageBase = `${supabaseUrl}/storage/v1/object/public/client-files/`;
+              for (const ref of visualRefs) {
+                if (ref.image_url) {
+                  const refUrl = ref.image_url.startsWith('http') 
+                    ? ref.image_url 
+                    : `${supabaseStorageBase}${ref.image_url}`;
+                  imageInputs.push({
+                    type: 'image',
+                    content: refUrl,
+                    // Flag this as a style reference, not content to edit
+                    imageBase64: undefined,
+                  });
+                }
+              }
+              console.log(`Passing ${imageInputs.length - 1} visual reference images to generate-content-v2`);
+            }
+            
             const imageResponse = await fetch(`${supabaseUrl}/functions/v1/generate-content-v2`, {
               method: 'POST',
               headers: {
@@ -1203,14 +1228,12 @@ REGRAS ABSOLUTAS:
               },
               body: JSON.stringify({
                 type: 'image',
-                inputs: [{
-                  type: 'text',
-                  content: fullImagePrompt
-                }],
+                inputs: imageInputs,
                 config: {
                   format: 'post',
                   aspectRatio: '1:1',
                   noText: true,
+                  useVisualReferences: visualRefs && visualRefs.length > 0,
                 },
                 clientId: automation.client_id,
                 workspaceId: automation.workspace_id,
