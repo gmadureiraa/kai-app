@@ -1,47 +1,50 @@
 
 
-# Plano: Automações LinkedIn + Twitter para Gabriel Madureira
+# Plano: Imagens com Referências de Anime para Automações do Madureira
 
-## Estado Atual
-- **Client ID:** `c3fdf44d-1eb5-49f0-aa91-a030642b5396`
-- **Twitter conectado:** account_id `6967b6e72b6dfd227e11c4b3` (valid)
-- **LinkedIn conectado:** account_id `6967b73c2b6dfd227e11c4b6` (valid)
-- **5 automações Twitter já existentes:** GM, Insight Diário, Visual, Noturno, Thread Semanal
-- **0 automações LinkedIn**
-- **Biblioteca:** 6+ conteúdos (tweets, articles, case studies) + 10+ referências (x_articles, tweets)
+## Problema Atual
 
-## Novas Automações a Criar
+1. **Referências visuais não são usadas como imagem**: O `generate-content-v2` busca as `client_visual_references` do Madureira (16 imagens de anime), mas só lê os campos de texto (`description`, `styleAnalysis`). Esses campos estão **todos vazios** (NULL) — então nada é enviado ao modelo.
 
-### LinkedIn (3 automações)
+2. **Nenhuma referência marcada como primária**: O `process-automations` filtra por `is_primary = true`, mas todas as 16 referências do Madureira têm `is_primary = false`. Zero referências são carregadas.
 
-**1. Post LinkedIn Semanal — Artigo de Opinião**
-- **Trigger:** Weekly, terça-feira 09:00
-- **Formato:** `linkedin_post`
-- **Prompt:** Criar post longo estilo artigo de opinião sobre marketing Web3, empreendedorismo ou tecnologia. Tom profissional e provocador. Baseado nas referências da biblioteca. Estrutura: hook forte → desenvolvimento com dados → conclusão com CTA de debate.
-- `auto_publish: false` (revisão antes de publicar no LinkedIn)
+3. **Imagem não é passada ao modelo**: Mesmo quando referências existem, o pipeline só envia texto descritivo ao Gemini — nunca envia a **imagem real** como input visual para o modelo replicar o estilo.
 
-**2. Post LinkedIn Semanal — Building in Public**
-- **Trigger:** Weekly, quinta-feira 10:00
-- **Formato:** `linkedin_post`
-- **Prompt:** Compartilhar aprendizado real da Kaleidos — bastidores, decisões, métricas, erros. Tom transparente e autêntico. Baseado nos pilares de conteúdo do cliente.
-- `auto_publish: false`
+4. **Modelo usado é o Flash (qualidade inferior)**: Usa `gemini-2.5-flash-image` ao invés do `gemini-3-pro-image-preview` que já está referenciado no código como "high-quality model".
 
-**3. Post LinkedIn Semanal — Case/Prova Social**
-- **Trigger:** Weekly, sexta-feira 11:00
-- **Formato:** `linkedin_post`
-- **Prompt:** Post de prova social — resultado de cliente, framework utilizado, ou insight prático do trabalho na Kaleidos. Tom autoridade + didático.
-- `auto_publish: false`
+## Solução
 
-### Twitter (1 automação adicional)
+### 1. Marcar referências do Madureira como primárias
+- SQL UPDATE para definir 3-4 das melhores referências de anime como `is_primary = true`
 
-**4. Tweet de Dica/Ferramenta**
-- **Trigger:** Weekly, quarta-feira 14:00
-- **Formato:** `tweet`
-- **Prompt:** Tweet prático com dica de ferramenta, hack de produtividade ou insight de copywriting. Baseado no pilar 4 do guia de conteúdo. Direto, acionável, curto.
-- `auto_publish: false`
+### 2. Atualizar `process-automations` para enviar imagens reais
+- No bloco de geração de imagem (linha ~1149), ao buscar `client_visual_references`, incluir o campo `image_url`
+- Passar as URLs das imagens de referência como inputs ao `generate-content-v2` para que o modelo Gemini veja o estilo real
 
-## Implementação
-- **4 INSERTs** na tabela `planning_automations` via insert tool
-- Sem mudanças de código — o sistema já suporta LinkedIn via Late API e todos os formatos
-- `auto_publish: false` em todas para o Madureira revisar antes de publicar (diferente do Defiverso que é automático)
+### 3. Atualizar `generate-content-v2` para usar referências como input visual
+- Quando `visualRefs` contém imagens, baixá-las do Storage e passá-las como `image_url` ao modelo
+- Isso permite que o Gemini **veja** o estilo anime e replique fielmente
+
+### 4. Usar modelo de alta qualidade (`gemini-3-pro-image-preview`)
+- Trocar o modelo de imagem de `gemini-2.5-flash-image` para `gemini-3-pro-image-preview` quando referências visuais existem, para máxima qualidade
+
+### 5. Atualizar automações do Madureira com imagem
+- Habilitar `auto_generate_image: true` nas automações que fazem sentido (GM, Visual Diário, LinkedIn posts)
+- Definir `image_prompt_template` com instruções específicas para replicar o estilo anime/personagem do Madureira
+
+## Automações Afetadas
+
+| Automação | Atual | Novo |
+|---|---|---|
+| 🎨 Tweet Visual Diário | `auto_generate_image: true` mas sem ref | Com referências de anime |
+| GM Tweet | `auto_generate_image: false` | `true` com estilo anime |
+| LinkedIn — Artigo de Opinião | `false` | `true` com estilo anime |
+| LinkedIn — Building in Public | `false` | `true` com estilo anime |
+| LinkedIn — Case & Prova Social | `false` | `true` com estilo anime |
+
+## Arquivos a Editar
+
+1. **`supabase/functions/process-automations/index.ts`** — Passar `image_url` das referências ao generate-content-v2
+2. **`supabase/functions/generate-content-v2/index.ts`** — Buscar imagem real do Storage e enviar ao Gemini como referência visual; usar modelo pro
+3. **SQL** — Marcar referências como primárias + atualizar automações
 
