@@ -686,11 +686,26 @@ The image should evoke the main theme visually without being overly literal.
 
       // Fetch visual references from client profile
       const visualRefs = await fetchClientVisualReferences(supabaseClient, clientId || null);
+      const hasVisualRefs = visualRefs.length > 0;
+      const useVisualReferences = (config as any).useVisualReferences || false;
+      
+      // Collect reference image URLs to pass as visual input to the model
+      const referenceImageUrls: string[] = [];
       
       if (visualRefs.length > 0) {
-        imagePrompt += `CLIENT VISUAL REFERENCES (match this style):\n`;
+        imagePrompt += `CLIENT VISUAL REFERENCES (match this style EXACTLY):\n`;
+        
+        const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
         
         for (const ref of visualRefs) {
+          // Build full URL for the reference image
+          if (ref.imageUrl) {
+            const fullUrl = ref.imageUrl.startsWith('http') 
+              ? ref.imageUrl 
+              : `${supabaseUrl}/storage/v1/object/public/client-files/${ref.imageUrl}`;
+            referenceImageUrls.push(fullUrl);
+          }
+          
           if (ref.styleAnalysis) {
             if (ref.styleAnalysis.style_summary) {
               imagePrompt += `- ${ref.type.toUpperCase()} STYLE: ${ref.styleAnalysis.style_summary}\n`;
@@ -703,8 +718,24 @@ The image should evoke the main theme visually without being overly literal.
             }
           }
         }
+        
+        if (referenceImageUrls.length > 0) {
+          imagePrompt += `\n⚡ IMPORTANT: Reference images are provided as visual input. Study them carefully and replicate the EXACT art style, character design, color palette, and linework.\n`;
+        }
         imagePrompt += "\n";
       }
+      
+      // Also collect reference images passed directly from process-automations inputs
+      for (const input of inputs) {
+        if (input.type === "image" && input.content && !input.imageBase64) {
+          // This is a URL reference image from process-automations
+          if (input.content.startsWith('http') && !referenceImageUrls.includes(input.content)) {
+            referenceImageUrls.push(input.content);
+          }
+        }
+      }
+      
+      console.log("[generate-content-v2] Reference images to pass to model:", referenceImageUrls.length);
 
       // Add client-specific style if available
       if (preferredStyle) {
@@ -814,9 +845,38 @@ ${config.noText ? '6. 🚫 ABSOLUTELY NO TEXT, LETTERS, NUMBERS, OR WRITTEN CONT
         console.log(`[generate-content-v2] Image generation attempt ${attempt}/${MAX_RETRIES + 1}`);
 
         const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-        const imageContent = referenceImage 
-          ? [{ type: "text", text: imagePrompt }, { type: "image_url", image_url: { url: referenceImage } }]
-          : imagePrompt;
+        
+        // Build content with reference images as visual input
+        let imageContent: any;
+        
+        if (referenceImageUrls.length > 0 || referenceImage) {
+          // Multi-modal: text + reference images
+          const contentParts: any[] = [{ type: "text", text: imagePrompt }];
+          
+          // Add reference image (user-uploaded)
+          if (referenceImage) {
+            contentParts.push({ type: "image_url", image_url: { url: referenceImage } });
+          }
+          
+          // Add client visual reference images (anime style refs etc.)
+          for (const refUrl of referenceImageUrls.slice(0, 3)) {
+            contentParts.push({ type: "image_url", image_url: { url: refUrl } });
+          }
+          
+          imageContent = contentParts;
+          console.log(`[generate-content-v2] Sending ${contentParts.length - 1} reference images to model`);
+        } else {
+          imageContent = referenceImage 
+            ? [{ type: "text", text: imagePrompt }, { type: "image_url", image_url: { url: referenceImage } }]
+            : imagePrompt;
+        }
+        
+        // Use pro model when visual references exist for maximum quality
+        const imageModel = (hasVisualRefs || useVisualReferences) 
+          ? "google/gemini-3-pro-image-preview" 
+          : "google/gemini-2.5-flash-image";
+        
+        console.log(`[generate-content-v2] Using model: ${imageModel}`);
         
         const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
           method: "POST",
@@ -825,7 +885,7 @@ ${config.noText ? '6. 🚫 ABSOLUTELY NO TEXT, LETTERS, NUMBERS, OR WRITTEN CONT
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            model: "google/gemini-2.5-flash-image",
+            model: imageModel,
             messages: [{ role: "user", content: imageContent }],
             modalities: ["image", "text"],
           }),
