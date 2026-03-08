@@ -14,6 +14,7 @@ import { SuperAdminRoute } from "@/components/SuperAdminRoute";
 import Login from "./pages/Login";
 import SimpleSignup from "./pages/SimpleSignup";
 import NotFound from "./pages/NotFound";
+import NoWorkspacePage from "./pages/NoWorkspacePage";
 import { WorkspaceProvider } from "@/contexts/WorkspaceContext";
 import { WorkspaceRouter } from "@/components/WorkspaceRouter";
 import { TokenErrorProvider } from "@/hooks/useTokenError";
@@ -62,6 +63,9 @@ const App = () => (
                       <Route index element={<Kai />} />
                       <Route path="docs" element={<Documentation />} />
                     </Route>
+                    
+                    {/* No workspace page */}
+                    <Route path="/no-workspace" element={<NoWorkspacePage />} />
                     
                     {/* Catch any other workspace slug and redirect to kaleidos */}
                     <Route path="/:slug" element={<Navigate to="/kaleidos" replace />} />

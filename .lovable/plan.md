@@ -1,69 +1,56 @@
 
 
-# Revisao Completa do App - Plano de Melhorias
+## Diagnóstico: Por que as automações não estão postando
 
-Apos revisar todas as paginas e componentes do projeto, identifiquei os seguintes problemas e oportunidades de melhoria:
+### Problema 1: LinkedIn - Itens criados mas nunca publicados
+As 3 automações de LinkedIn (Artigo de Opinião, Building in Public, Case & Prova Social) estão **funcionando corretamente** na geração de conteúdo e imagens. O problema é que todas estão com `auto_publish: false`. Os itens são criados com status "idea" no planejamento e ficam lá esperando publicação manual. Nenhum deles jamais é publicado automaticamente.
 
----
+### Problema 2: Threads - Nenhuma automação configurada
+As credenciais do Threads (conta `madureira0x`) estão válidas, mas **não existe nenhuma automação** direcionada ao Threads.
 
-## Problemas Encontrados
+### Problema 3: Bug no retry de imagem
+No `process-automations`, linha ~1322, o retry de geração de imagem referencia a variável `resolvedImagePrompt` que **não existe** no escopo (o nome correto é `fullImagePrompt`). Isso faz o retry falhar silenciosamente.
 
-### 1. Pagina 404 - WhatsApp com numero falso
-O `NotFound.tsx` (linha 70) usa `wa.me/5511999999999` como link de suporte - um numero placeholder. Deveria usar o mesmo link real do WhatsApp que a pagina Help usa: `https://api.whatsapp.com/send/?phone=12936180547`.
-
-### 2. Help - Links de artigos nao funcionam
-Os artigos nas categorias da pagina Help sao `<button>` sem acao nenhuma - clicar neles nao faz nada. Sao links mortos.
-
-### 3. Help - Video tutorial e placeholder
-A secao "Aprenda em 5 minutos" mostra um botao "Assistir tutorial" que nao vai a lugar nenhum.
-
-### 4. Help - Link /settings quebrado
-O quick link "Configuracoes" aponta para `/settings` que nao existe como rota no App.tsx. Deveria apontar para `/kaleidos?tab=settings`.
-
-### 5. Help - Link /kai desatualizado
-Os links "Voltar ao app" e "Abrir Canvas" apontam para `/kai` em vez de `/kaleidos`.
-
-### 6. Sidebar - Automacoes so visivel para devs
-A aba de Automacoes na sidebar so aparece para usuarios com `hasDevAccess`. Se voce quer que admins do workspace tambem vejam, isso precisa mudar.
-
-### 7. NotFound - Icone Search para "Entrar na conta"
-O botao "Entrar na conta" usa icone `Search` em vez de um icone mais adequado como `LogIn`.
-
-### 8. Rotas catch-all redirecionam para /kaleidos
-As rotas `/:slug` e `/:slug/*` redirecionam tudo para `/kaleidos`, impedindo paginas como `/no-workspace` e `/help` de funcionar corretamente via navegacao direta (embora /help esteja declarado antes, `/no-workspace` nao esta na lista de rotas).
-
-### 9. Rota /no-workspace ausente
-`NoWorkspacePage` e importado em Login.tsx redirect logic mas a rota `/no-workspace` nao esta declarada no App.tsx, fazendo o redirect cair no catch-all `/:slug` → `/kaleidos`.
+### Problema 4: Qualidade do conteúdo LinkedIn repetitivo
+Os posts gerados para LinkedIn estão todos girando em torno do mesmo tema ("clareza vs complexidade em Web3"). Falta diversidade temática e o sistema de variação (que existe para tweets) não está implementado para LinkedIn.
 
 ---
 
-## Plano de Implementacao
+## Plano de Implementação
 
-### Passo 1: Corrigir NotFound.tsx
-- Trocar WhatsApp placeholder pelo link real
-- Trocar icone Search por LogIn
+### 1. Corrigir bug do retry de imagem no process-automations
+- Substituir `resolvedImagePrompt` por `fullImagePrompt` na linha do retry
 
-### Passo 2: Corrigir links da pagina Help
-- `/kai` → `/kaleidos`
-- `/settings` → `/kaleidos?tab=settings`
-- `/kai?tab=planning` → `/kaleidos?tab=planning`
+### 2. Criar sistema de variação para LinkedIn (anti-repetição)
+Adicionar categorias editoriais para LinkedIn similares ao `GM_VARIATION_CATEGORIES` dos tweets:
+- **Artigo de Opinião**: Análise contrarian de tendência, dados concretos, framework próprio
+- **Building in Public**: Bastidores reais, números, aprendizados honestos, erros
+- **Case & Prova Social**: Resultados de clientes, métricas antes/depois, processo
 
-### Passo 3: Adicionar rota /no-workspace no App.tsx
-- Importar e adicionar `<Route path="/no-workspace" element={<NoWorkspacePage />} />` antes dos catch-alls
+Cada automação LinkedIn receberá um `variation_index` rotativo com sub-temas específicos para evitar repetição.
 
-### Passo 4: Tornar Automacoes visivel para admins do workspace
-- Mudar condicao de `hasDevAccess` para `hasDevAccess || canManageTeam` na sidebar
+### 3. Melhorar prompts LinkedIn com estratégia de conteúdo
+Enriquecer os prompts usando o guia de conteúdo do Madureira (`public/clients/madureira/guia-conteudo.md`):
+- Incorporar os 5 pilares de conteúdo como rotação temática
+- Usar tom de voz definido: técnico mas didático, direto, visionário
+- Adicionar instruções de formatação específicas para LinkedIn (quebras de linha, storytelling, CTA)
 
-### Passo 5: Remover/melhorar secoes placeholder do Help
-- Remover secao de video tutorial (ou marcar como "Em breve")
-- Adicionar toast "Em breve" ao clicar nos artigos
+### 4. Habilitar auto_publish para LinkedIn (com revisão inteligente)
+Alterar as 3 automações de LinkedIn para `auto_publish: true` para que os posts sejam publicados automaticamente após geração.
+
+### 5. Criar automações para Threads
+Criar 2-3 automações de Threads para o perfil Madureira:
+- **Threads Diário** (daily): Repurpose do melhor tweet do dia ou insight rápido
+- **Threads Semanal** (weekly): Versão expandida de um tweet de alta performance
+
+### 6. Melhorar geração de imagem para LinkedIn
+- Ajustar o aspect ratio para LinkedIn: `1.91:1` (landscape) em vez de `1:1`
+- Enriquecer prompts de imagem com contexto profissional/corporativo
+- Usar modelo `google/gemini-3-pro-image-preview` para maior qualidade nas imagens de LinkedIn
 
 ---
 
-## Detalhes Tecnicos
-
-- **Arquivos afetados**: `NotFound.tsx`, `Help.tsx`, `App.tsx`, `KaiSidebar.tsx`
-- **Sem migracao de banco** necessaria
-- **Sem novas dependencias**
-- Todas as mudancas sao frontend-only
+### Arquivos a modificar
+1. `supabase/functions/process-automations/index.ts` - Fix retry bug, adicionar variação LinkedIn, melhorar prompts
+2. Database: Atualizar `planning_automations` para habilitar auto_publish nas automações LinkedIn e criar novas automações Threads
 
