@@ -7,6 +7,7 @@ import { KaiPerformanceTab } from "@/components/kai/KaiPerformanceTab";
 import { KaiLibraryTab } from "@/components/kai/KaiLibraryTab";
 import { KaiDocsTab } from "@/components/kai/KaiDocsTab";
 import { KaiAssistantTab } from "@/components/kai/KaiAssistantTab";
+import { KaiAnalyticsTab } from "@/components/kai/KaiAnalyticsTab";
 
 import { ClientsManagementTool } from "@/components/kai/tools/ClientsManagementTool";
 import { ContentCanvas } from "@/components/kai/canvas/ContentCanvas";
