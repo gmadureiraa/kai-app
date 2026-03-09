@@ -288,6 +288,14 @@ export function YouTubeDashboard({ clientId, videos, isLoading }: YouTubeDashboa
               <Button 
                 variant="outline" 
                 className="border-border/50"
+                onClick={() => setShowApiFetch(!showApiFetch)}
+              >
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Buscar via API
+              </Button>
+              <Button 
+                variant="outline" 
+                className="border-border/50"
                 onClick={() => setShowRssImporter(true)}
               >
                 <Rss className="h-4 w-4 mr-2" />
