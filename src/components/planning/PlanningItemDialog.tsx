@@ -562,33 +562,44 @@ export function PlanningItemDialog({
             </Select>
           </div>
 
-          {/* Platform Selection Checkboxes */}
+          {/* Platform Selection - Chip style */}
           <div className="space-y-2">
             <Label className="text-xs text-muted-foreground">Publicar em:</Label>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-3">
               {ALL_PUBLISH_PLATFORMS.map((p) => {
                 const status = getPlatformStatus(p.value as any);
                 const isConnected = status?.hasApi && status?.isValid;
+                const isSelected = selectedPlatforms.includes(p.value);
+                const IconComponent = platformLucideIcons[p.value];
                 return (
-                  <label
+                  <button
                     key={p.value}
+                    type="button"
+                    onClick={() => togglePlatform(p.value)}
                     className={cn(
-                      "flex items-center gap-2 p-2 rounded-md border cursor-pointer text-sm transition-colors",
-                      selectedPlatforms.includes(p.value)
-                        ? "border-primary bg-primary/5"
-                        : "border-border hover:border-muted-foreground/30",
-                      !isConnected && "opacity-50"
+                      "flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border text-xs font-medium transition-all duration-150",
+                      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                      isSelected
+                        ? "border-primary/50 bg-primary/10 text-foreground shadow-sm"
+                        : "border-border/60 bg-card text-muted-foreground hover:border-border hover:bg-accent/50",
+                      !isConnected && "opacity-40"
                     )}
+                    style={isSelected ? { borderColor: p.brandColor, backgroundColor: `${p.brandColor}15` } : undefined}
                   >
-                    <Checkbox
-                      checked={selectedPlatforms.includes(p.value)}
-                      onCheckedChange={() => togglePlatform(p.value)}
-                    />
-                    <span className="truncate">{p.label}</span>
-                    {isConnected && (
-                      <span className="ml-auto text-[10px] text-green-500">●</span>
+                    {IconComponent && (
+                      <IconComponent
+                        className="h-3.5 w-3.5 shrink-0"
+                        style={isSelected ? { color: p.brandColor } : undefined}
+                      />
                     )}
-                  </label>
+                    <span className="truncate">{p.label}</span>
+                    {isSelected && (
+                      <Check className="h-3 w-3 ml-auto shrink-0 text-primary" style={{ color: p.brandColor }} />
+                    )}
+                    {!isSelected && isConnected && (
+                      <span className="ml-auto h-1.5 w-1.5 rounded-full bg-emerald-500 shrink-0" />
+                    )}
+                  </button>
                 );
               })}
             </div>
