@@ -67,7 +67,7 @@ export function SocialIntegrationsTab({ clientId }: SocialIntegrationsTabProps) 
     credentials, 
     isLoading, 
   } = useSocialCredentials(clientId);
-  const { isEnterprise } = usePlanFeatures();
+  
   const { toast } = useToast();
 
   const lateConnection = useLateConnection({ clientId });
