@@ -92,7 +92,7 @@ export function InstagramCSVUpload({ clientId }: InstagramCSVUploadProps) {
             }
           });
 
-          console.log("[InstagramCSV] Column map:", colMap);
+          
 
           const posts: ParsedPost[] = [];
           for (let i = headerRowIdx + 1; i < rows.length; i++) {
