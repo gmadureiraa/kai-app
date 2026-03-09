@@ -73,30 +73,6 @@ export default function Kai() {
       redirectTab = "canvas";
     }
     
-    // Plan-based access restrictions for Canvas plan
-    if (isCanvas) {
-      // Library requires Pro plan
-      if (tab === "library" && !canAccessLibrary) {
-        shouldRedirect = true;
-        redirectTab = "canvas";
-        showUpgradePrompt("library_locked");
-      }
-      
-      // Performance requires Pro plan
-      if (tab === "performance" && !canAccessPerformance) {
-        shouldRedirect = true;
-        redirectTab = "canvas";
-        showUpgradePrompt("performance_locked");
-      }
-      
-      // Profiles require Pro plan
-      if (tab === "clients" && !canAccessProfiles) {
-        shouldRedirect = true;
-        redirectTab = "canvas";
-        showUpgradePrompt("profiles_locked");
-      }
-    }
-    
     // Admin tabs require specific permissions
     if (tab === "clients" && !canViewClients) {
       shouldRedirect = true;
