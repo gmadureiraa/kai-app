@@ -87,7 +87,7 @@ serve(async (req) => {
         console.log(`[fetch-youtube-apify] Run started: ${runId}, dataset: ${defaultDatasetId}`);
 
         // Step 2: Poll for completion
-        const maxWaitMs = 100_000;
+        const maxWaitMs = 180_000;
         const pollIntervalMs = 5_000;
         const startTime = Date.now();
         let status = runData.data?.status;
