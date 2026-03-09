@@ -3,7 +3,7 @@ import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { 
   MoreHorizontal, 
-  Twitter, Linkedin, Instagram, Youtube, Mail, FileText, Video
+  Twitter, Linkedin, Instagram, Youtube, Mail, FileText, Video, Facebook, AtSign
 } from 'lucide-react';
 import { ImageLightbox } from './ImageLightbox';
 import { Button } from '@/components/ui/button';
@@ -23,6 +23,7 @@ import {
 import { cn } from '@/lib/utils';
 import { PublicationStatusBadge } from './PublicationStatusBadge';
 import { useClientPlatformStatus } from '@/hooks/useClientPlatformStatus';
+import { PLATFORM_COLOR_MAP } from '@/types/contentTypes';
 import type { PlanningItem } from '@/hooks/usePlanningItems';
 
 interface PlanningItemCardProps {
@@ -45,6 +46,8 @@ const platformIcons: Record<string, React.ElementType> = {
   newsletter: Mail,
   blog: FileText,
   tiktok: Video,
+  facebook: Facebook,
+  threads: AtSign,
   other: FileText,
 };
 
@@ -75,8 +78,13 @@ export const PlanningItemCard = memo(function PlanningItemCard({
   const { getPublicationMode, getPlatformStatus } = useClientPlatformStatus(item.client_id);
   
   const platform = item.platform || 'other';
-  const PlatformIcon = platformIcons[platform] || FileText;
-  const dotColor = platformDotColors[platform] || 'bg-muted-foreground';
+  const metadata = item.metadata as any || {};
+  const targetPlatforms: string[] = metadata.target_platforms?.length > 0
+    ? metadata.target_platforms
+    : [platform];
+  const primaryPlatform = targetPlatforms[0] || platform;
+  const PlatformIcon = platformIcons[primaryPlatform] || FileText;
+  const dotColor = platformDotColors[primaryPlatform] || 'bg-muted-foreground';
 
   const displayDate = item.scheduled_at || item.due_date;
   const isFailed = item.status === 'failed';
@@ -164,8 +172,25 @@ export const PlanningItemCard = memo(function PlanningItemCard({
         {/* Row 3: Footer metadata */}
         <div className="flex items-center justify-between mt-2.5 ml-3.5">
           <div className="flex items-center gap-2 text-muted-foreground">
-            {/* Platform icon */}
-            <PlatformIcon className="h-3 w-3" />
+            {/* Platform icons - show all target platforms */}
+            <div className="flex items-center gap-0.5">
+              {targetPlatforms.slice(0, 3).map((tp) => {
+                const Icon = platformIcons[tp] || FileText;
+                const color = PLATFORM_COLOR_MAP[tp];
+                return (
+                  <Icon
+                    key={tp}
+                    className="h-3 w-3"
+                    style={color ? { color } : undefined}
+                  />
+                );
+              })}
+              {targetPlatforms.length > 3 && (
+                <span className="text-[9px] text-muted-foreground font-medium">
+                  +{targetPlatforms.length - 3}
+                </span>
+              )}
+            </div>
             
             {/* Date */}
             {displayDate && (

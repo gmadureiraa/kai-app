@@ -10,7 +10,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { CalendarIcon, Loader2, Wand2, ChevronDown, Image, User, Settings2, Send, Bot, Clock } from 'lucide-react';
+import { CalendarIcon, Loader2, Wand2, ChevronDown, Image, User, Settings2, Send, Bot, Clock, Twitter, Linkedin, Instagram, Youtube, Facebook, Video, Mail, FileText, AtSign, Check } from 'lucide-react';
 import { useClients } from '@/hooks/useClients';
 import { useTeamMembers } from '@/hooks/useTeamMembers';
 import { usePlanningImageGeneration } from '@/hooks/usePlanningImageGeneration';
@@ -27,10 +27,22 @@ import { PlanningItemComments } from './PlanningItemComments';
 import { MentionableInput } from './MentionableInput';
 import { RecurrenceConfig } from './RecurrenceConfig';
 import { CONTENT_TYPE_OPTIONS, CONTENT_TO_PLATFORM, ContentTypeKey, ALL_PUBLISH_PLATFORMS } from '@/types/contentTypes';
-import { Checkbox } from '@/components/ui/checkbox';
-import { toast } from 'sonner';
 import type { PlanningItem, CreatePlanningItemInput, PlanningPlatform, PlanningPriority, KanbanColumn } from '@/hooks/usePlanningItems';
 import type { RecurrenceConfig as RecurrenceConfigType } from '@/types/recurrence';
+
+// Map platform values to Lucide icon components
+const platformLucideIcons: Record<string, React.ElementType> = {
+  twitter: Twitter,
+  linkedin: Linkedin,
+  instagram: Instagram,
+  threads: AtSign,
+  tiktok: Video,
+  youtube: Youtube,
+  facebook: Facebook,
+  newsletter: Mail,
+  blog: FileText,
+};
+import { toast } from 'sonner';
 
 interface PlanningItemDialogProps {
   open: boolean;
@@ -562,33 +574,44 @@ export function PlanningItemDialog({
             </Select>
           </div>
 
-          {/* Platform Selection Checkboxes */}
+          {/* Platform Selection - Chip style */}
           <div className="space-y-2">
             <Label className="text-xs text-muted-foreground">Publicar em:</Label>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-3">
               {ALL_PUBLISH_PLATFORMS.map((p) => {
                 const status = getPlatformStatus(p.value as any);
                 const isConnected = status?.hasApi && status?.isValid;
+                const isSelected = selectedPlatforms.includes(p.value);
+                const IconComponent = platformLucideIcons[p.value];
                 return (
-                  <label
+                  <button
                     key={p.value}
+                    type="button"
+                    onClick={() => togglePlatform(p.value)}
                     className={cn(
-                      "flex items-center gap-2 p-2 rounded-md border cursor-pointer text-sm transition-colors",
-                      selectedPlatforms.includes(p.value)
-                        ? "border-primary bg-primary/5"
-                        : "border-border hover:border-muted-foreground/30",
-                      !isConnected && "opacity-50"
+                      "flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border text-xs font-medium transition-all duration-150",
+                      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                      isSelected
+                        ? "border-primary/50 bg-primary/10 text-foreground shadow-sm"
+                        : "border-border/60 bg-card text-muted-foreground hover:border-border hover:bg-accent/50",
+                      !isConnected && "opacity-40"
                     )}
+                    style={isSelected ? { borderColor: p.brandColor, backgroundColor: `${p.brandColor}15` } : undefined}
                   >
-                    <Checkbox
-                      checked={selectedPlatforms.includes(p.value)}
-                      onCheckedChange={() => togglePlatform(p.value)}
-                    />
-                    <span className="truncate">{p.label}</span>
-                    {isConnected && (
-                      <span className="ml-auto text-[10px] text-green-500">●</span>
+                    {IconComponent && (
+                      <IconComponent
+                        className="h-3.5 w-3.5 shrink-0"
+                        style={isSelected ? { color: p.brandColor } : undefined}
+                      />
                     )}
-                  </label>
+                    <span className="truncate">{p.label}</span>
+                    {isSelected && (
+                      <Check className="h-3 w-3 ml-auto shrink-0 text-primary" style={{ color: p.brandColor }} />
+                    )}
+                    {!isSelected && isConnected && (
+                      <span className="ml-auto h-1.5 w-1.5 rounded-full bg-emerald-500 shrink-0" />
+                    )}
+                  </button>
                 );
               })}
             </div>
@@ -827,14 +850,25 @@ export function PlanningItemDialog({
                 variant="secondary"
                 onClick={handlePublishNow}
                 disabled={isPublishing || isSubmitting}
-                className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white"
+                className="gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white"
               >
                 {isPublishing ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
-                  <Send className="h-4 w-4" />
+                  <Send className="h-3.5 w-3.5" />
                 )}
-                Publicar {publishablePlatforms.length > 1 ? `(${publishablePlatforms.length})` : 'Agora'}
+                Publicar
+                {publishablePlatforms.length > 1 && (
+                  <span className="flex items-center gap-0.5 ml-0.5">
+                    {publishablePlatforms.slice(0, 3).map(pp => {
+                      const Icon = platformLucideIcons[pp];
+                      return Icon ? <Icon key={pp} className="h-3 w-3 opacity-80" /> : null;
+                    })}
+                    {publishablePlatforms.length > 3 && (
+                      <span className="text-[10px] opacity-80">+{publishablePlatforms.length - 3}</span>
+                    )}
+                  </span>
+                )}
               </Button>
             )}
             {!readOnly && (
