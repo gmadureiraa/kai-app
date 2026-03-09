@@ -16,8 +16,12 @@ import { ImportHistoryPanel } from "./ImportHistoryPanel";
 import { DataCompletenessWarning } from "./DataCompletenessWarning";
 import { MetricMiniCard } from "./MetricMiniCard";
 import { PerformanceReportGenerator } from "./PerformanceReportGenerator";
+import { useFetchYouTubeMetrics } from "@/hooks/useYouTubeMetrics";
 import { subDays, format, parseISO, isAfter, startOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { Input } from "@/components/ui/input";
+import { toast } from "sonner";
+import { Loader2, RefreshCw } from "lucide-react";
 
 interface YouTubeVideo {
   id: string;
