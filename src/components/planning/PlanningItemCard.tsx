@@ -3,7 +3,7 @@ import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { 
   MoreHorizontal, 
-  Twitter, Linkedin, Instagram, Youtube, Mail, FileText, Video
+  Twitter, Linkedin, Instagram, Youtube, Mail, FileText, Video, Facebook, AtSign
 } from 'lucide-react';
 import { ImageLightbox } from './ImageLightbox';
 import { Button } from '@/components/ui/button';
@@ -23,6 +23,7 @@ import {
 import { cn } from '@/lib/utils';
 import { PublicationStatusBadge } from './PublicationStatusBadge';
 import { useClientPlatformStatus } from '@/hooks/useClientPlatformStatus';
+import { PLATFORM_COLOR_MAP } from '@/types/contentTypes';
 import type { PlanningItem } from '@/hooks/usePlanningItems';
 
 interface PlanningItemCardProps {
@@ -45,6 +46,8 @@ const platformIcons: Record<string, React.ElementType> = {
   newsletter: Mail,
   blog: FileText,
   tiktok: Video,
+  facebook: Facebook,
+  threads: AtSign,
   other: FileText,
 };
 

@@ -850,14 +850,25 @@ export function PlanningItemDialog({
                 variant="secondary"
                 onClick={handlePublishNow}
                 disabled={isPublishing || isSubmitting}
-                className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white"
+                className="gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white"
               >
                 {isPublishing ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
-                  <Send className="h-4 w-4" />
+                  <Send className="h-3.5 w-3.5" />
                 )}
-                Publicar {publishablePlatforms.length > 1 ? `(${publishablePlatforms.length})` : 'Agora'}
+                Publicar
+                {publishablePlatforms.length > 1 && (
+                  <span className="flex items-center gap-0.5 ml-0.5">
+                    {publishablePlatforms.slice(0, 3).map(pp => {
+                      const Icon = platformLucideIcons[pp];
+                      return Icon ? <Icon key={pp} className="h-3 w-3 opacity-80" /> : null;
+                    })}
+                    {publishablePlatforms.length > 3 && (
+                      <span className="text-[10px] opacity-80">+{publishablePlatforms.length - 3}</span>
+                    )}
+                  </span>
+                )}
               </Button>
             )}
             {!readOnly && (
