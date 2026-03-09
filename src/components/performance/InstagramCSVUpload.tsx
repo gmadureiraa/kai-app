@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Upload, FileSpreadsheet, CheckCircle, AlertCircle } from "lucide-react";
 import { useImportInstagramPostsCSV } from "@/hooks/useInstagramPosts";
+import * as XLSX from "xlsx";
 
 interface InstagramCSVUploadProps {
   clientId: string;
