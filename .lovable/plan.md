@@ -1,56 +1,65 @@
 
 
-## Diagnóstico: Por que as automações não estão postando
+# kAI Chat: Análise de Métricas + Criação de Cards no Planejamento
 
-### Problema 1: LinkedIn - Itens criados mas nunca publicados
-As 3 automações de LinkedIn (Artigo de Opinião, Building in Public, Case & Prova Social) estão **funcionando corretamente** na geração de conteúdo e imagens. O problema é que todas estão com `auto_publish: false`. Os itens são criados com status "idea" no planejamento e ficam lá esperando publicação manual. Nenhum deles jamais é publicado automaticamente.
+## Problema
+O kAI já cria cards no planejamento e já consulta métricas (Instagram, LinkedIn), mas:
+1. **YouTube não está no contexto de métricas** — a tabela `youtube_videos` nunca é consultada em `fetchMetricsContext()`
+2. **O fluxo de planejamento não usa métricas** — quando o usuário pede "analise os melhores vídeos e crie 10 temas no planejamento", o sistema não sabe combinar análise + criação de cards
+3. **A detecção de intent não captura pedidos compostos** — como "analise...e suba no planejamento"
 
-### Problema 2: Threads - Nenhuma automação configurada
-As credenciais do Threads (conta `madureira0x`) estão válidas, mas **não existe nenhuma automação** direcionada ao Threads.
+## Mudanças
 
-### Problema 3: Bug no retry de imagem
-No `process-automations`, linha ~1322, o retry de geração de imagem referencia a variável `resolvedImagePrompt` que **não existe** no escopo (o nome correto é `fullImagePrompt`). Isso faz o retry falhar silenciosamente.
+### 1. Adicionar YouTube ao `fetchMetricsContext()` (`kai-simple-chat/index.ts`)
 
-### Problema 4: Qualidade do conteúdo LinkedIn repetitivo
-Os posts gerados para LinkedIn estão todos girando em torno do mesmo tema ("clareza vs complexidade em Web3"). Falta diversidade temática e o sistema de variação (que existe para tweets) não está implementado para LinkedIn.
+Incluir query à tabela `youtube_videos` no `Promise.all` existente, ordenando por views/likes. Renderizar os top vídeos com título, views, likes, comments e published_at no contexto.
 
----
+### 2. Expandir `detectPlanningIntent()` com padrões de análise+criação
 
-## Plano de Implementação
+Adicionar patterns como:
+- `analise...e crie/suba/coloque no planejamento`
+- `com base nos melhores...crie cards`
+- `sugira temas...e adicione ao planejamento`
 
-### 1. Corrigir bug do retry de imagem no process-automations
-- Substituir `resolvedImagePrompt` por `fullImagePrompt` na linha do retry
+Novo campo no `PlanningIntent`: `analyzeFirst: boolean` — indica que deve buscar métricas antes de gerar os cards.
 
-### 2. Criar sistema de variação para LinkedIn (anti-repetição)
-Adicionar categorias editoriais para LinkedIn similares ao `GM_VARIATION_CATEGORIES` dos tweets:
-- **Artigo de Opinião**: Análise contrarian de tendência, dados concretos, framework próprio
-- **Building in Public**: Bastidores reais, números, aprendizados honestos, erros
-- **Case & Prova Social**: Resultados de clientes, métricas antes/depois, processo
+### 3. Enriquecer `generatePlanningCards()` com dados de métricas
 
-Cada automação LinkedIn receberá um `variation_index` rotativo com sub-temas específicos para evitar repetição.
+Quando `intent.analyzeFirst` é true:
+- Buscar top YouTube videos (e outros dados de métricas) do cliente
+- Incluir esses dados no prompt de geração como contexto de análise
+- O prompt pedirá para a IA criar temas **novos** inspirados nos melhores conteúdos
 
-### 3. Melhorar prompts LinkedIn com estratégia de conteúdo
-Enriquecer os prompts usando o guia de conteúdo do Madureira (`public/clients/madureira/guia-conteudo.md`):
-- Incorporar os 5 pilares de conteúdo como rotação temática
-- Usar tom de voz definido: técnico mas didático, direto, visionário
-- Adicionar instruções de formatação específicas para LinkedIn (quebras de linha, storytelling, CTA)
+### 4. Prompt de geração enriquecido
 
-### 4. Habilitar auto_publish para LinkedIn (com revisão inteligente)
-Alterar as 3 automações de LinkedIn para `auto_publish: true` para que os posts sejam publicados automaticamente após geração.
+O prompt incluirá:
+- Lista dos top vídeos com views/likes
+- Instrução para identificar padrões de sucesso
+- Instrução para gerar temas **novos** com tópicos detalhados
+- Output JSON com title + description (tópicos a abordar)
 
-### 5. Criar automações para Threads
-Criar 2-3 automações de Threads para o perfil Madureira:
-- **Threads Diário** (daily): Repurpose do melhor tweet do dia ou insight rápido
-- **Threads Semanal** (weekly): Versão expandida de um tweet de alta performance
+## Arquivos
 
-### 6. Melhorar geração de imagem para LinkedIn
-- Ajustar o aspect ratio para LinkedIn: `1.91:1` (landscape) em vez de `1:1`
-- Enriquecer prompts de imagem com contexto profissional/corporativo
-- Usar modelo `google/gemini-3-pro-image-preview` para maior qualidade nas imagens de LinkedIn
+| Arquivo | Mudança |
+|---------|---------|
+| `supabase/functions/kai-simple-chat/index.ts` | Adicionar YouTube a `fetchMetricsContext`, expandir `detectPlanningIntent`, enriquecer `generatePlanningCards` |
 
----
+## Fluxo do Usuário
 
-### Arquivos a modificar
-1. `supabase/functions/process-automations/index.ts` - Fix retry bug, adicionar variação LinkedIn, melhorar prompts
-2. Database: Atualizar `planning_automations` para habilitar auto_publish nas automações LinkedIn e criar novas automações Threads
+```text
+User: "Analise os melhores conteúdos de YouTube de todos os tempos 
+       e crie 10 temas no planejamento"
+
+→ detectPlanningIntent: isPlanning=true, analyzeFirst=true, 
+  quantity=10, platform=youtube
+
+→ generatePlanningCards:
+  1. Busca top 30 youtube_videos por views DESC
+  2. Monta prompt com dados reais dos vídeos
+  3. IA gera 10 temas novos com tópicos detalhados
+  4. Insere 10 cards no planejamento
+  
+→ Resposta: "✅ 10 cards criados para YouTube!
+   Baseado na análise dos seus top vídeos..."
+```
 
