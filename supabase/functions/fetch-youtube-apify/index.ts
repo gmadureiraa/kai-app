@@ -51,35 +51,43 @@ serve(async (req) => {
 
     let items: any[] = [];
     let lastError = "";
+    const MAX_RETRIES = 2;
 
     for (const APIFY_API_TOKEN of apifyTokens) {
-      try {
-        console.log(`[fetch-youtube-apify] Trying token ending ...${APIFY_API_TOKEN.slice(-4)}`);
-
-        // Step 1: Start the actor run (async)
-        const startUrl = `https://api.apify.com/v2/acts/${actorId}/runs?token=${APIFY_API_TOKEN}`;
-        const startResponse = await fetch(startUrl, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            startUrls: [{ url: normalizedUrl }],
-            maxResults: singleVideo ? 1 : (customMaxResults || 50),
-            maxResultsShorts: 0,
-            maxResultStreams: 0,
-            scrapeComments: false,
-          }),
-        });
-
-        if (!startResponse.ok) {
-          const errorText = await startResponse.text();
-          console.error(`[fetch-youtube-apify] Start error (${startResponse.status}):`, errorText);
-          if (startResponse.status === 429 || errorText.includes("limit")) {
-            lastError = `Token ...${APIFY_API_TOKEN.slice(-4)} hit rate limit, trying next...`;
-            continue;
+      for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+        try {
+          if (attempt > 0) {
+            const waitMs = Math.pow(2, attempt) * 3000 + Math.random() * 2000;
+            console.log(`[fetch-youtube-apify] Retry ${attempt}, waiting ${Math.round(waitMs)}ms...`);
+            await new Promise(r => setTimeout(r, waitMs));
           }
-          lastError = `Apify start error: ${startResponse.status}`;
-          continue;
-        }
+          console.log(`[fetch-youtube-apify] Trying token ...${APIFY_API_TOKEN.slice(-4)} (attempt ${attempt + 1})`);
+
+          // Step 1: Start the actor run (async)
+          const startUrl = `https://api.apify.com/v2/acts/${actorId}/runs?token=${APIFY_API_TOKEN}`;
+          const startResponse = await fetch(startUrl, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              startUrls: [{ url: normalizedUrl }],
+              maxResults: singleVideo ? 1 : (customMaxResults || 50),
+              maxResultsShorts: 0,
+              maxResultStreams: 0,
+              scrapeComments: false,
+            }),
+          });
+
+          if (!startResponse.ok) {
+            const errorText = await startResponse.text();
+            console.error(`[fetch-youtube-apify] Start error (${startResponse.status}):`, errorText);
+            if (startResponse.status === 429 || errorText.includes("limit")) {
+              lastError = `Token ...${APIFY_API_TOKEN.slice(-4)} hit rate limit`;
+              if (attempt < MAX_RETRIES) continue; // retry same token
+              break; // try next token
+            }
+            lastError = `Apify start error: ${startResponse.status}`;
+            break; // non-retryable, try next token
+          }
 
         const runData = await startResponse.json();
         const runId = runData.data?.id;
@@ -117,12 +125,14 @@ serve(async (req) => {
         const datasetResponse = await fetch(datasetUrl);
         items = await datasetResponse.json();
         console.log(`[fetch-youtube-apify] Got ${items.length} items with token ...${APIFY_API_TOKEN.slice(-4)}`);
-        break; // Success, exit the loop
+        break; // Success, exit retry loop
       } catch (tokenErr) {
-        console.error(`[fetch-youtube-apify] Token ...${APIFY_API_TOKEN.slice(-4)} failed:`, tokenErr);
+        console.error(`[fetch-youtube-apify] Token ...${APIFY_API_TOKEN.slice(-4)} attempt ${attempt + 1} failed:`, tokenErr);
         lastError = tokenErr instanceof Error ? tokenErr.message : "Unknown token error";
-        continue;
+        if (attempt < MAX_RETRIES) continue; // retry
       }
+      } // end retry loop
+      if (items.length > 0) break; // success, exit token loop
     }
 
     if (!Array.isArray(items) || items.length === 0) {
