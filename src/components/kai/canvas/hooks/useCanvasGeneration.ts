@@ -349,14 +349,10 @@ export function useCanvasGeneration({
 
         // Use generate-content-v2 which fetches client_visual_references automatically
         const imageInputs: any[] = [{ type: 'text', content: imagePrompt }];
-        // Add reference images as inputs
-        for (const ref of allImageRefs.slice(0, 2)) {
-          if (ref.url || ref.base64) {
-            imageInputs.push({ 
-              type: 'image', 
-              content: ref.url || '', 
-              imageBase64: ref.base64 || undefined 
-            });
+        // Add reference images as inputs (allImageRefs are URL strings)
+        for (const refUrl of allImageRefs.slice(0, 2)) {
+          if (refUrl) {
+            imageInputs.push({ type: 'image', content: refUrl });
           }
         }
         
