@@ -1558,6 +1558,8 @@ serve(async (req) => {
       isComparison: comparisonQuery.isComparison,
       isContentCreation: contentCreation.isContentCreation,
       isPlanningRequest: planningIntent.isPlanning,
+      analyzeFirst: planningIntent.analyzeFirst,
+      analyzeSource: planningIntent.analyzeSource,
       needsPlanningRead,
       dateRange, metricFocus,
     });
