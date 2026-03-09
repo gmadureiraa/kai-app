@@ -37,6 +37,8 @@ interface RequestBody {
   imageUrls?: string[];
   citations?: Citation[];
   history?: HistoryMessage[];
+  materialContext?: string;
+  materialTitle?: string;
 }
 
 // User instructions that override default behaviors
