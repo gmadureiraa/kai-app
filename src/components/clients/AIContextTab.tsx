@@ -11,6 +11,7 @@ import { useClientContext, ContextSources } from "@/hooks/useClientContext";
 import { useClients } from "@/hooks/useClients";
 import { useToast } from "@/hooks/use-toast";
 import { VoiceProfileEditor } from "./VoiceProfileEditor";
+import { ContentGuidelinesCard } from "./ContentGuidelinesCard";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 
@@ -41,18 +42,21 @@ export function AIContextTab({
   const { updateClient } = useClients();
   const { toast } = useToast();
 
-  // Fetch voice profile
-  const { data: voiceProfile, refetch: refetchVoiceProfile } = useQuery({
-    queryKey: ["voice-profile", clientId],
+  // Fetch voice profile and content guidelines
+  const { data: clientExtras, refetch: refetchExtras } = useQuery({
+    queryKey: ["client-extras", clientId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("clients")
-        .select("voice_profile")
+        .select("voice_profile, content_guidelines")
         .eq("id", clientId)
         .single();
       
       if (error) throw error;
-      return (data?.voice_profile as unknown as VoiceProfile) || null;
+      return {
+        voiceProfile: (data?.voice_profile as unknown as VoiceProfile) || null,
+        contentGuidelines: (data as Record<string, unknown>)?.content_guidelines as string | null,
+      };
     },
     enabled: !!clientId,
   });
@@ -144,8 +148,15 @@ export function AIContextTab({
       {/* Voice Profile Editor */}
       <VoiceProfileEditor 
         clientId={clientId}
-        initialProfile={voiceProfile}
-        onSave={() => refetchVoiceProfile()}
+        initialProfile={clientExtras?.voiceProfile ?? null}
+        onSave={() => refetchExtras()}
+      />
+
+      {/* Content Guidelines */}
+      <ContentGuidelinesCard
+        clientId={clientId}
+        initialGuidelines={clientExtras?.contentGuidelines ?? null}
+        onUpdate={() => refetchExtras()}
       />
 
       {/* Data Sources Status */}

@@ -46,6 +46,7 @@ export function SourcesBadge({ sources, className, variant = "inline" }: Sources
     !!sources.format_rules,
     sources.voice_profile,
     sources.global_knowledge,
+    sources.content_guidelines,
   ].filter(Boolean).length;
 
   if (activeSourcesCount === 0) return null;
@@ -84,6 +85,11 @@ export function SourcesBadge({ sources, className, variant = "inline" }: Sources
         icon={Star}
         label="Knowledge Base"
         active={sources.global_knowledge}
+      />
+      <SourceItem
+        icon={BookOpen}
+        label="Guia de Criação"
+        active={sources.content_guidelines}
       />
     </>
   );

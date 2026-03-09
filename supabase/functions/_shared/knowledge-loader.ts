@@ -535,7 +535,7 @@ export async function getFullContentContext(params: FullContentContextParams & {
   try {
     const { data: client, error } = await supabase
       .from("clients")
-      .select("name, identity_guide, description, context_notes, social_media")
+      .select("name, identity_guide, description, context_notes, social_media, content_guidelines")
       .eq("id", clientId)
       .single();
     
@@ -554,6 +554,13 @@ export async function getFullContentContext(params: FullContentContextParams & {
           context += `**Notas de Contexto:**\n${client.context_notes}\n\n`;
         }
         context += `---\n\n`;
+      }
+      
+      // CONTENT GUIDELINES (guia de criação prático)
+      if (client.content_guidelines) {
+        context += `## 📝 GUIA DE CRIAÇÃO (REGRAS PRÁTICAS — ALTA PRIORIDADE)\n`;
+        context += `*SIGA estas regras práticas ao criar qualquer conteúdo para este cliente:*\n\n`;
+        context += `${client.content_guidelines}\n\n---\n\n`;
       }
       
       // Redes sociais (informativo)
