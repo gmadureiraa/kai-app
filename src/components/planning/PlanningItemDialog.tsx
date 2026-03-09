@@ -834,7 +834,7 @@ export function PlanningItemDialog({
                 ) : (
                   <Send className="h-4 w-4" />
                 )}
-                Publicar Agora
+                Publicar {publishablePlatforms.length > 1 ? `(${publishablePlatforms.length})` : 'Agora'}
               </Button>
             )}
             {!readOnly && (
