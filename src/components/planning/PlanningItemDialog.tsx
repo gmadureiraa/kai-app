@@ -620,6 +620,11 @@ export function PlanningItemDialog({
                 {publishablePlatforms.length} de {selectedPlatforms.length} conectada(s)
               </p>
             )}
+            {selectedPlatforms.includes('threads') && content.length > 500 && (
+              <p className="text-[10px] text-amber-500 font-medium">
+                ⚠️ Threads tem limite de 500 caracteres ({content.length}/500). O texto será truncado automaticamente.
+              </p>
+            )}
           </div>
 
           {/* Reference Input with @mentions + Generate */}

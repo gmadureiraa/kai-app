@@ -479,6 +479,13 @@ serve(async (req: Request) => {
           userMessage = "Limite de publicações atingido. Tente novamente mais tarde.";
         } else if (responseText.includes("unauthorized") || responseText.includes("401")) {
           userMessage = "Credenciais expiradas. Reconecte a conta.";
+        } else if (responseText.includes("2207052")) {
+          userMessage = "Threads: erro ao processar mídia. Verifique se a imagem/vídeo é acessível.";
+        } else if (responseText.includes("2207050")) {
+          userMessage = "Threads: conta restrita. Verifique as permissões da conta.";
+        } else if (responseText.includes("character") || responseText.includes("too long")) {
+          userMessage = "Threads: conteúdo excede o limite de 500 caracteres.";
+          userMessage = "Credenciais expiradas. Reconecte a conta.";
         }
       }
 
