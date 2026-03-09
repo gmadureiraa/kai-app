@@ -1575,7 +1575,7 @@ serve(async (req) => {
 
     // 4. Handle Planning Card Creation
     if (planningIntent.isPlanning) {
-      if (planningIntent.missingInfo.length > 0 && !planningIntent.sourceUrl && !planningIntent.topic) {
+      if (planningIntent.missingInfo.length > 0 && !planningIntent.sourceUrl && !planningIntent.topic && !planningIntent.analyzeFirst) {
         const missingInfoPrompt = buildPlanningQuestionPrompt(planningIntent, client.name);
         const encoder = new TextEncoder();
         const stream = new ReadableStream({
