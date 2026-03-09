@@ -141,6 +141,7 @@ export function usePlanningAutomations() {
           auto_generate_image: input.auto_generate_image || false,
           image_prompt_template: input.image_prompt_template,
           image_style: input.image_style || 'photographic',
+          image_reference_ids: input.image_reference_ids || null,
           created_by: user?.id,
         } as any)
         .select()
