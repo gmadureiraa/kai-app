@@ -1,99 +1,56 @@
-# Auditoria Completa: kAI Chat — O Que Tem e O Que Falta
-
-## Análise do Estado Atual
-
-O `kai-simple-chat` é uma edge function de **2623 linhas** que funciona como o cérebro do kAI. Após auditoria completa, aqui está o mapa de acesso:
-
-### O que o kAI Chat JÁ acessa
 
 
-| Recurso                       | Como acessa                              | Qualidade                  |
-| ----------------------------- | ---------------------------------------- | -------------------------- |
-| **Identity Guide** do cliente | `clients.identity_guide`                 | Bom (truncado em 8K chars) |
-| **Métricas Instagram**        | `instagram_posts` (top 5 por ER)         | Parcial — só Instagram     |
-| **Biblioteca de Conteúdo**    | Via `@mentions` (citations) + auto-fetch | Bom                        |
-| **Biblioteca de Referências** | Via `@mentions` (citations) + auto-fetch | Bom                        |
-| **Regras de Formato**         | `_shared/format-rules.ts`                | Excelente                  |
-| **Web Search** (Google)       | Via Gemini grounding                     | Bom                        |
-| **Geração de Imagem**         | Endpoint dedicado                        | Bom                        |
-| **Criação de Cards**          | INSERT em `planning_items`               | Bom                        |
-| **Comparação de Períodos**    | `instagram_posts` com date ranges        | Parcial — só Instagram     |
-| **Histórico de Conversa**     | 15 mensagens recentes                    | Bom                        |
+## Diagnóstico: Por que as automações não estão postando
 
+### Problema 1: LinkedIn - Itens criados mas nunca publicados
+As 3 automações de LinkedIn (Artigo de Opinião, Building in Public, Case & Prova Social) estão **funcionando corretamente** na geração de conteúdo e imagens. O problema é que todas estão com `auto_publish: false`. Os itens são criados com status "idea" no planejamento e ficam lá esperando publicação manual. Nenhum deles jamais é publicado automaticamente.
 
-### O que o kAI Chat NÃO acessa (GAPS)
+### Problema 2: Threads - Nenhuma automação configurada
+As credenciais do Threads (conta `madureira0x`) estão válidas, mas **não existe nenhuma automação** direcionada ao Threads.
 
+### Problema 3: Bug no retry de imagem
+No `process-automations`, linha ~1322, o retry de geração de imagem referencia a variável `resolvedImagePrompt` que **não existe** no escopo (o nome correto é `fullImagePrompt`). Isso faz o retry falhar silenciosamente.
 
-| Recurso Ausente                             | Impacto                                    | Prioridade |
-| ------------------------------------------- | ------------------------------------------ | ---------- |
-| **Twitter/LinkedIn/YouTube posts**          | Não analisa métricas dessas plataformas    | Alta       |
-| **Analytics real-time (Late API)**          | Recém-criado, não integrado ao chat        | Alta       |
-| **Planning items (leitura)**                | Não sabe o que está agendado/pendente      | Alta       |
-| **Documentos** (PDFs, DOCX)                 | Não consulta documentos do cliente         | Média      |
-| **Websites** (conteúdo scrapeado)           | Não usa sites do cliente como contexto     | Média      |
-| **Global Knowledge**                        | Base de conhecimento do workspace ignorada | Média      |
-| **Voice Profile**                           | Perfil de voz gerado mas não injetado      | Média      |
-| **Content Guidelines**                      | Diretrizes de conteúdo não acessadas       | Média      |
-| **Automations status**                      | Não sabe quais automações existem          | Baixa      |
-| **Canvas data**                             | Não vê conteúdo de canvas salvos           | Baixa      |
-| **Operações de escrita** (além de planning) | Não pode editar items, mover cards, etc.   | Média      |
-
-
-### Bugs/Limitações Encontrados
-
-1. **Bloqueio de plano**: Linhas 1911-1917 checam `ALLOWED_PLANS = ["pro", "enterprise", "agency"]` — mas o sistema é interno sem planos. Se o workspace não tiver subscription "pro", o chat retorna 403.
-2. **Só Instagram**: `fetchMetricsContext` e `fetchComparisonContext` consultam apenas `instagram_posts`. Twitter, LinkedIn, YouTube são ignorados.
-3. **Google API Key direta**: Usa `GOOGLE_AI_STUDIO_API_KEY` em vez do Lovable AI Gateway (que não requer API key).
-4. **Sem Knowledge Base**: `global_knowledge` com embeddings existe mas o chat não usa `search_knowledge_semantic`.
+### Problema 4: Qualidade do conteúdo LinkedIn repetitivo
+Os posts gerados para LinkedIn estão todos girando em torno do mesmo tema ("clareza vs complexidade em Web3"). Falta diversidade temática e o sistema de variação (que existe para tweets) não está implementado para LinkedIn.
 
 ---
 
-## Plano de Melhorias
+## Plano de Implementação
 
-### 1. Remover bloqueio de plano (sistema interno)
+### 1. Corrigir bug do retry de imagem no process-automations
+- Substituir `resolvedImagePrompt` por `fullImagePrompt` na linha do retry
 
-- Remover check de `ALLOWED_PLANS` que bloqueia acesso
+### 2. Criar sistema de variação para LinkedIn (anti-repetição)
+Adicionar categorias editoriais para LinkedIn similares ao `GM_VARIATION_CATEGORIES` dos tweets:
+- **Artigo de Opinião**: Análise contrarian de tendência, dados concretos, framework próprio
+- **Building in Public**: Bastidores reais, números, aprendizados honestos, erros
+- **Case & Prova Social**: Resultados de clientes, métricas antes/depois, processo
 
-### 2. Expandir métricas para todas as plataformas
+Cada automação LinkedIn receberá um `variation_index` rotativo com sub-temas específicos para evitar repetição.
 
-- Adicionar queries para `twitter_posts`, `linkedin_posts`, `youtube_videos`
-- Detectar plataforma mencionada e buscar dados corretos
+### 3. Melhorar prompts LinkedIn com estratégia de conteúdo
+Enriquecer os prompts usando o guia de conteúdo do Madureira (`public/clients/madureira/guia-conteudo.md`):
+- Incorporar os 5 pilares de conteúdo como rotação temática
+- Usar tom de voz definido: técnico mas didático, direto, visionário
+- Adicionar instruções de formatação específicas para LinkedIn (quebras de linha, storytelling, CTA)
 
-### 3. Integrar leitura do Planejamento
+### 4. Habilitar auto_publish para LinkedIn (com revisão inteligente)
+Alterar as 3 automações de LinkedIn para `auto_publish: true` para que os posts sejam publicados automaticamente após geração.
 
-- Quando o usuário perguntar "o que temos agendado?" ou "planejamento da semana", buscar `planning_items` do cliente
-- Permitir perguntas como "quantos posts pendentes?" ou "o que está atrasado?"
+### 5. Criar automações para Threads
+Criar 2-3 automações de Threads para o perfil Madureira:
+- **Threads Diário** (daily): Repurpose do melhor tweet do dia ou insight rápido
+- **Threads Semanal** (weekly): Versão expandida de um tweet de alta performance
 
-### 4. Integrar Analytics real-time
+### 6. Melhorar geração de imagem para LinkedIn
+- Ajustar o aspect ratio para LinkedIn: `1.91:1` (landscape) em vez de `1:1`
+- Enriquecer prompts de imagem com contexto profissional/corporativo
+- Usar modelo `google/gemini-3-pro-image-preview` para maior qualidade nas imagens de LinkedIn
 
-- Quando detectar intent de analytics, chamar internamente a edge function `late-analytics` e injetar os dados no contexto
+---
 
-### 5. Injetar Voice Profile e Content Guidelines
+### Arquivos a modificar
+1. `supabase/functions/process-automations/index.ts` - Fix retry bug, adicionar variação LinkedIn, melhorar prompts
+2. Database: Atualizar `planning_automations` para habilitar auto_publish nas automações LinkedIn e criar novas automações Threads
 
-- Buscar `voice_profiles` e `content_guidelines` do cliente e adicionar ao system prompt
-
-### 6. Integrar Global Knowledge
-
-- Usar `search_knowledge_semantic` para enriquecer respostas com conhecimento do workspace
-
-### 7. Acessar Documentos e Websites
-
-- Buscar `client_documents.extracted_content` e `websites.scraped_markdown` quando relevante
-
-## Arquivos Modificados
-
-
-| Arquivo                                       | Mudança                                                                                                                                  |
-| --------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| `supabase/functions/kai-simple-chat/index.ts` | Remover plan check, adicionar multi-platform metrics, planning read, voice profile, knowledge search, document access, gateway migration |
-
-
-## Prioridade de Implementação
-
-1. Remover bloqueio de plano (1 linha)
-2. Multi-platform metrics (Twitter, LinkedIn, YouTube)
-3. Leitura do planejamento
-4. Voice profile + content guidelines injection
-5. Global knowledge search
-6. Analytics real-time integration
-7. Documents/websites context
