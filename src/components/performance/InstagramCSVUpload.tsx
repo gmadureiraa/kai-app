@@ -64,7 +64,7 @@ export function InstagramCSVUpload({ clientId }: InstagramCSVUploadProps) {
           }
 
           const headers = rows[headerRowIdx].map(normalizeHeader);
-          console.log("[InstagramCSV] Headers found:", headers);
+          
 
           // Build column map
           const colMap: Record<string, number> = {};
@@ -92,7 +92,7 @@ export function InstagramCSVUpload({ clientId }: InstagramCSVUploadProps) {
             }
           });
 
-          console.log("[InstagramCSV] Column map:", colMap);
+          
 
           const posts: ParsedPost[] = [];
           for (let i = headerRowIdx + 1; i < rows.length; i++) {
@@ -157,7 +157,7 @@ export function InstagramCSVUpload({ clientId }: InstagramCSVUploadProps) {
             }
           }
 
-          console.log(`[InstagramCSV] Parsed ${deduped.size} unique posts from ${rows.length - 1} rows`);
+          
           resolve(Array.from(deduped.values()));
         } catch (err) {
           reject(err);

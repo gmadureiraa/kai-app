@@ -292,7 +292,7 @@ export function GlobalKAIProvider({ children }: GlobalKAIProviderProps) {
       clientId: selectedClientId,
     });
 
-    console.log("[GlobalKAI] Detected action:", detectedAction);
+    
 
     // If action requires confirmation, show preview
     if (detectedAction.requiresConfirmation && detectedAction.confidence >= 0.7) {

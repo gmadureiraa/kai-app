@@ -5,7 +5,7 @@ import { MobileHeader } from "@/components/kai/MobileHeader";
 import { GradientHero } from "@/components/kai/GradientHero";
 import { KaiPerformanceTab } from "@/components/kai/KaiPerformanceTab";
 import { KaiLibraryTab } from "@/components/kai/KaiLibraryTab";
-import { KaiDocsTab } from "@/components/kai/KaiDocsTab";
+
 import { KaiAssistantTab } from "@/components/kai/KaiAssistantTab";
 import { KaiAnalyticsTab } from "@/components/kai/KaiAnalyticsTab";
 
@@ -132,7 +132,7 @@ export default function Kai() {
     }
 
     // Tools that don't need client
-    const toolTabs = ["canvas", "clients", "docs", "settings", "automations", "assistant", "analytics"];
+    const toolTabs = ["canvas", "clients", "settings", "automations", "assistant", "analytics"];
     
     if (toolTabs.includes(tab)) {
       switch (tab) {
@@ -144,12 +144,6 @@ export default function Kai() {
           );
         case "clients":
           return <ClientsManagementTool />;
-        case "docs":
-          return (
-            <div className="p-6 overflow-y-auto h-full">
-              <KaiDocsTab />
-            </div>
-          );
         case "settings":
           return <SettingsTab />;
         case "automations":
