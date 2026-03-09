@@ -256,11 +256,6 @@ export function YouTubeVideosTable({ videos, clientId, isLoading }: YouTubeVideo
                   Coment. <ArrowUpDown className="ml-1 h-3 w-3" />
                 </Button>
               </TableHead>
-              <TableHead className="w-[70px]">
-                <Button variant="ghost" size="sm" className="h-8 px-2" onClick={() => handleSort("click_rate")}>
-                  CTR <ArrowUpDown className="ml-1 h-3 w-3" />
-                </Button>
-              </TableHead>
               <TableHead className="w-[90px]">Status</TableHead>
               <TableHead className="w-[140px]">Transcrição</TableHead>
             </TableRow>
