@@ -27,7 +27,21 @@ import { PlanningItemComments } from './PlanningItemComments';
 import { MentionableInput } from './MentionableInput';
 import { RecurrenceConfig } from './RecurrenceConfig';
 import { CONTENT_TYPE_OPTIONS, CONTENT_TO_PLATFORM, ContentTypeKey, ALL_PUBLISH_PLATFORMS } from '@/types/contentTypes';
-import { Checkbox } from '@/components/ui/checkbox';
+import type { PlanningItem, CreatePlanningItemInput, PlanningPlatform, PlanningPriority, KanbanColumn } from '@/hooks/usePlanningItems';
+import type { RecurrenceConfig as RecurrenceConfigType } from '@/types/recurrence';
+
+// Map platform values to Lucide icon components
+const platformLucideIcons: Record<string, React.ElementType> = {
+  twitter: Twitter,
+  linkedin: Linkedin,
+  instagram: Instagram,
+  threads: AtSign,
+  tiktok: Video,
+  youtube: Youtube,
+  facebook: Facebook,
+  newsletter: Mail,
+  blog: FileText,
+};
 import { toast } from 'sonner';
 import type { PlanningItem, CreatePlanningItemInput, PlanningPlatform, PlanningPriority, KanbanColumn } from '@/hooks/usePlanningItems';
 import type { RecurrenceConfig as RecurrenceConfigType } from '@/types/recurrence';
