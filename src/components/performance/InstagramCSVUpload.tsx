@@ -33,6 +33,7 @@ export function InstagramCSVUpload({ clientId }: InstagramCSVUploadProps) {
   function normalizeHeader(h: any): string {
     if (!h) return "";
     return String(h).trim().toLowerCase()
+      .replace(/^\ufeff/, "") // Remove BOM
       .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
       .replace(/['"]/g, "");
   }
@@ -94,14 +95,16 @@ export function InstagramCSVUpload({ clientId }: InstagramCSVUploadProps) {
             const row = rows[i];
             if (!row || row.length < 2) continue;
 
-            // Only process "Total" rows (Meta CSVs have multiple date breakdowns)
-            const dataComment = colMap.data_comment !== undefined ? String(row[colMap.data_comment] || "").trim() : "";
-            if (dataComment && dataComment.toLowerCase() !== "total" && dataComment !== "") {
-              // Check if there's a "Data" column with "Total"
-              const dataVal = colMap.data_comment !== undefined ? "" : "";
-              // For Meta format, skip non-Total rows
-              const possibleTotal = row.find((cell: any) => String(cell).trim().toLowerCase() === "total");
-              if (!possibleTotal) continue;
+            // Only process "Total" rows (Meta CSVs have multiple date breakdowns per post)
+            // The "Data" column (index after "Comentário de dados") contains "Total" or a date
+            const hasDataColumn = headers.some(h => h === "data" || h === "date");
+            if (hasDataColumn) {
+              // Find the "Data" column index
+              const dataColIdx = headers.findIndex(h => h === "data" || h === "date");
+              if (dataColIdx >= 0) {
+                const dataVal = String(row[dataColIdx] || "").trim().toLowerCase();
+                if (dataVal !== "total") continue;
+              }
             }
 
             const postId = String(row[colMap.post_id] || "").trim();
