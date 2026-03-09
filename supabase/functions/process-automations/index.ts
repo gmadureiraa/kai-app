@@ -1563,8 +1563,13 @@ REGRAS ABSOLUTAS:
                   },
                   body: JSON.stringify({
                     type: 'image',
-                    type: 'image',
                     inputs: imageInputs,
+                    config: {
+                      format: isLinkedIn ? 'linkedin_post' : 'post',
+                      aspectRatio: isLinkedIn ? '16:9' : '1:1',
+                      noText: true,
+                      useVisualReferences: visualRefs && visualRefs.length > 0,
+                    },
                     settings: {
                       imageStyle: automation.image_style || 'illustration',
                     },
