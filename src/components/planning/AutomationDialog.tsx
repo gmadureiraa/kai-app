@@ -176,6 +176,7 @@ export function AutomationDialog({ open, onOpenChange, automation }: AutomationD
       setClientId(automation.client_id || '');
       setColumnId(automation.target_column_id || '');
       setPlatform(automation.platform || '');
+      setSelectedPlatforms((automation as any).platforms || []);
       setContentType(automation.content_type || 'tweet');
       setAutoGenerate(automation.auto_generate_content);
       setPromptTemplate(automation.prompt_template || '');
