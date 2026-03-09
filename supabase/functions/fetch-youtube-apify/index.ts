@@ -47,7 +47,7 @@ serve(async (req) => {
 
     // Run the Apify YouTube Channel Scraper actor synchronously
     const actorId = "streamers~youtube-scraper";
-    const runUrl = `https://api.apify.com/v2/acts/${actorId}/run-sync-get-dataset-items?token=${APIFY_API_TOKEN}&timeout=120`;
+    const runUrl = `https://api.apify.com/v2/acts/${actorId}/run-sync-get-dataset-items?token=${APIFY_API_TOKEN}&timeout=300`;
 
     const apifyBody: Record<string, unknown> = {
       startUrls: [{ url: normalizedUrl }],
