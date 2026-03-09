@@ -380,19 +380,13 @@ export function PlanningItemDialog({
   };
 
   const handlePublishNow = async () => {
-    // Explicit validations with user feedback
-    if (!platform) {
-      toast.error('Selecione um tipo de conteúdo com plataforma');
-      return;
-    }
-    
     if (!selectedClientId) {
       toast.error('Selecione um cliente');
       return;
     }
     
-    if (!canPublishNow) {
-      toast.error('Conta não conectada ou conteúdo vazio');
+    if (publishablePlatforms.length === 0) {
+      toast.error('Nenhuma plataforma conectada selecionada');
       return;
     }
     
@@ -416,12 +410,13 @@ export function PlanningItemDialog({
           content: finalContent.trim(),
           client_id: selectedClientId,
           column_id: columnId || columns[0]?.id,
-          platform: platform,
+          platform: selectedPlatforms[0] as PlanningPlatform,
           priority,
           status: 'publishing',
           media_urls: mediaItems.map(m => m.url),
           metadata: {
             content_type: contentType,
+            target_platforms: selectedPlatforms,
             ...(isTwitterThread && { thread_tweets: threadTweets }),
           },
         };
@@ -441,30 +436,39 @@ export function PlanningItemDialog({
     }
     
     setIsPublishing(true);
+    const successPlatforms: string[] = [];
+    const failedPlatforms: string[] = [];
+    
     try {
-      console.log('[PlanningItemDialog] Publishing...', { 
-        platform, 
-        contentLength: finalContent.length, 
-        itemId,
-        hasMedia: mediaItems.length > 0,
-      });
-      
-      await lateConnection.publishContent(
-        platform as LatePlatform,
-        finalContent,
-        {
-          mediaUrls: mediaItems.map(m => m.url),
-          planningItemId: itemId,
-          threadItems: isTwitterThread ? threadTweets : undefined,
+      for (const targetPlatform of publishablePlatforms) {
+        try {
+          console.log(`[PlanningItemDialog] Publishing to ${targetPlatform}...`);
+          await lateConnection.publishContent(
+            targetPlatform as LatePlatform,
+            finalContent,
+            {
+              mediaUrls: mediaItems.map(m => m.url),
+              planningItemId: itemId,
+              threadItems: isTwitterThread ? threadTweets : undefined,
+            }
+          );
+          successPlatforms.push(targetPlatform);
+        } catch (err) {
+          console.error(`[PlanningItemDialog] Failed to publish to ${targetPlatform}:`, err);
+          failedPlatforms.push(targetPlatform);
         }
-      );
-      toast.success(`Publicado em ${platform}!`);
-      onOpenChange(false);
-    } catch (error) {
-      console.error('[PlanningItemDialog] Publish error:', error);
-      // Error toast is handled by useLateConnection, but add explicit feedback for edge cases
-      if (error instanceof Error && !error.message) {
-        toast.error('Erro desconhecido ao publicar. Tente novamente.');
+      }
+
+      if (successPlatforms.length > 0 && failedPlatforms.length === 0) {
+        toast.success(`Publicado em ${successPlatforms.length} plataforma(s)!`);
+      } else if (successPlatforms.length > 0) {
+        toast.warning(`Publicado em ${successPlatforms.length}/${publishablePlatforms.length} plataformas. Falhou: ${failedPlatforms.join(', ')}`);
+      } else {
+        toast.error('Falha ao publicar em todas as plataformas');
+      }
+      
+      if (successPlatforms.length > 0) {
+        onOpenChange(false);
       }
     } finally {
       setIsPublishing(false);
