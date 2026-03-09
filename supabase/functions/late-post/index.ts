@@ -368,8 +368,8 @@ serve(async (req: Request) => {
       // Set content to first tweet for backwards compatibility, but Late uses threadItems
       postPayload.content = lateThreadItems[0]?.content || content;
     } else {
-      // Standard post (non-thread)
-      postPayload.content = content;
+      // Standard post (non-thread) - use postContent (truncated for Threads)
+      postPayload.content = postContent;
       
       // Build platform-specific data
       const platformSpecificData: Record<string, unknown> = {};
