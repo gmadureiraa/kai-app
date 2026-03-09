@@ -1416,8 +1416,10 @@ export type Database = {
       kai_chat_conversations: {
         Row: {
           client_id: string
+          context_summary: string | null
           created_at: string | null
           id: string
+          last_format_used: string | null
           last_message_preview: string | null
           title: string | null
           updated_at: string | null
@@ -1425,8 +1427,10 @@ export type Database = {
         }
         Insert: {
           client_id: string
+          context_summary?: string | null
           created_at?: string | null
           id?: string
+          last_format_used?: string | null
           last_message_preview?: string | null
           title?: string | null
           updated_at?: string | null
@@ -1434,8 +1438,10 @@ export type Database = {
         }
         Update: {
           client_id?: string
+          context_summary?: string | null
           created_at?: string | null
           id?: string
+          last_format_used?: string | null
           last_message_preview?: string | null
           title?: string | null
           updated_at?: string | null
