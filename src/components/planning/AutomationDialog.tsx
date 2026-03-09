@@ -123,6 +123,7 @@ export function AutomationDialog({ open, onOpenChange, automation }: AutomationD
   const [clientId, setClientId] = useState<string>('');
   const [columnId, setColumnId] = useState<string>('');
   const [platform, setPlatform] = useState<string>('');
+  const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
   const [contentType, setContentType] = useState('tweet');
   const [autoGenerate, setAutoGenerate] = useState(false);
   const [promptTemplate, setPromptTemplate] = useState('');
@@ -175,6 +176,7 @@ export function AutomationDialog({ open, onOpenChange, automation }: AutomationD
       setClientId(automation.client_id || '');
       setColumnId(automation.target_column_id || '');
       setPlatform(automation.platform || '');
+      setSelectedPlatforms((automation as any).platforms || []);
       setContentType(automation.content_type || 'tweet');
       setAutoGenerate(automation.auto_generate_content);
       setPromptTemplate(automation.prompt_template || '');
@@ -206,6 +208,7 @@ export function AutomationDialog({ open, onOpenChange, automation }: AutomationD
       setClientId('');
       setColumnId('');
       setPlatform('');
+      setSelectedPlatforms([]);
       setContentType('tweet');
       setAutoGenerate(false);
       setPromptTemplate('');
@@ -321,6 +324,7 @@ export function AutomationDialog({ open, onOpenChange, automation }: AutomationD
       client_id: clientId || null,
       target_column_id: columnId || null,
       platform: platform || null,
+      platforms: selectedPlatforms.length > 0 ? selectedPlatforms : null,
       content_type: contentType,
       auto_generate_content: autoGenerate,
       prompt_template: autoGenerate ? promptTemplate : null,
@@ -704,22 +708,30 @@ export function AutomationDialog({ open, onOpenChange, automation }: AutomationD
             </div>
 
             <div className="space-y-2">
-              <Label>Plataforma</Label>
-              <Select value={platform || "none"} onValueChange={(v) => setPlatform(v === "none" ? "" : v)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Nenhuma</SelectItem>
-                  {PLATFORMS.map((p) => (
-                    <SelectItem key={p.value} value={p.value}>
+              <Label>Plataformas de publicação</Label>
+              <div className="flex flex-wrap gap-2">
+                {PLATFORMS.map((p) => (
+                  <div key={p.value} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`platform-${p.value}`}
+                      checked={selectedPlatforms.includes(p.value)}
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          setSelectedPlatforms(prev => [...prev, p.value]);
+                          if (!platform) setPlatform(p.value);
+                        } else {
+                          setSelectedPlatforms(prev => prev.filter(v => v !== p.value));
+                        }
+                      }}
+                    />
+                    <label htmlFor={`platform-${p.value}`} className="text-sm cursor-pointer">
                       {p.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                    </label>
+                  </div>
+                ))}
+              </div>
               <p className="text-xs text-muted-foreground">
-                Derivada automaticamente do tipo de conteúdo
+                Selecione uma ou mais plataformas para publicar o mesmo conteúdo
               </p>
             </div>
           </div>
@@ -871,7 +883,7 @@ export function AutomationDialog({ open, onOpenChange, automation }: AutomationD
               <Switch 
                 checked={autoPublish} 
                 onCheckedChange={setAutoPublish}
-                disabled={!autoGenerate || !platform || !clientId}
+                disabled={!autoGenerate || (selectedPlatforms.length === 0 && !platform) || !clientId}
               />
             </div>
 
@@ -879,16 +891,16 @@ export function AutomationDialog({ open, onOpenChange, automation }: AutomationD
               <div className="flex items-start gap-2 p-3 bg-amber-500/10 rounded-lg">
                 <AlertCircle className="h-4 w-4 text-amber-500 mt-0.5 flex-shrink-0" />
                 <p className="text-sm text-amber-700 dark:text-amber-400">
-                  Requer conta conectada (Late API) para a plataforma selecionada.
+                  Requer conta conectada (Late API) para as plataformas selecionadas.
                   Certifique-se de que as credenciais estão configuradas no perfil.
                 </p>
               </div>
             )}
 
-            {(!autoGenerate || !platform || !clientId) && (
+            {(!autoGenerate || (selectedPlatforms.length === 0 && !platform) || !clientId) && (
               <p className="text-xs text-muted-foreground">
                 {!autoGenerate && "Ative a geração de conteúdo para habilitar. "}
-                {!platform && "Selecione uma plataforma. "}
+                {selectedPlatforms.length === 0 && !platform && "Selecione ao menos uma plataforma. "}
                 {!clientId && "Selecione um perfil."}
               </p>
             )}

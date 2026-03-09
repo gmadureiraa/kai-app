@@ -36,6 +36,7 @@ export interface PlanningAutomation {
   trigger_config: TriggerConfig;
   target_column_id: string | null;
   platform: string | null;
+  platforms: string[] | null;
   content_type: string;
   auto_generate_content: boolean;
   prompt_template: string | null;
@@ -59,6 +60,7 @@ export interface CreateAutomationInput {
   trigger_config: TriggerConfig;
   target_column_id?: string | null;
   platform?: string | null;
+  platforms?: string[] | null;
   content_type?: string;
   auto_generate_content?: boolean;
   prompt_template?: string | null;
@@ -129,6 +131,7 @@ export function usePlanningAutomations() {
           trigger_config: configToJson(input.trigger_config),
           target_column_id: input.target_column_id,
           platform: input.platform,
+          platforms: input.platforms || null,
           content_type: input.content_type || 'social_post',
           auto_generate_content: input.auto_generate_content || false,
           prompt_template: input.prompt_template,
@@ -137,7 +140,7 @@ export function usePlanningAutomations() {
           image_prompt_template: input.image_prompt_template,
           image_style: input.image_style || 'photographic',
           created_by: user?.id,
-        })
+        } as any)
         .select()
         .single();
       
@@ -167,13 +170,14 @@ export function usePlanningAutomations() {
       if (input.trigger_config !== undefined) updateData.trigger_config = configToJson(input.trigger_config);
       if (input.target_column_id !== undefined) updateData.target_column_id = input.target_column_id;
       if (input.platform !== undefined) updateData.platform = input.platform;
+      if (input.platforms !== undefined) updateData.platforms = input.platforms;
       if (input.content_type !== undefined) updateData.content_type = input.content_type;
       if (input.auto_generate_content !== undefined) updateData.auto_generate_content = input.auto_generate_content;
       if (input.prompt_template !== undefined) updateData.prompt_template = input.prompt_template;
-      if ((input as any).auto_publish !== undefined) updateData.auto_publish = (input as any).auto_publish;
-      if ((input as any).auto_generate_image !== undefined) updateData.auto_generate_image = (input as any).auto_generate_image;
-      if ((input as any).image_prompt_template !== undefined) updateData.image_prompt_template = (input as any).image_prompt_template;
-      if ((input as any).image_style !== undefined) updateData.image_style = (input as any).image_style;
+      if (input.auto_publish !== undefined) updateData.auto_publish = input.auto_publish;
+      if (input.auto_generate_image !== undefined) updateData.auto_generate_image = input.auto_generate_image;
+      if (input.image_prompt_template !== undefined) updateData.image_prompt_template = input.image_prompt_template;
+      if (input.image_style !== undefined) updateData.image_style = input.image_style;
       if (input.is_active !== undefined) updateData.is_active = input.is_active;
       
       const { data, error } = await supabase

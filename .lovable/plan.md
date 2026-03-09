@@ -1,95 +1,56 @@
 
 
-# Plano: Multi-plataforma + Revisão de Threads/Carrosseis/Reels
+## Diagnóstico: Por que as automações não estão postando
 
-## Problemas Identificados
+### Problema 1: LinkedIn - Itens criados mas nunca publicados
+As 3 automações de LinkedIn (Artigo de Opinião, Building in Public, Case & Prova Social) estão **funcionando corretamente** na geração de conteúdo e imagens. O problema é que todas estão com `auto_publish: false`. Os itens são criados com status "idea" no planejamento e ficam lá esperando publicação manual. Nenhum deles jamais é publicado automaticamente.
 
-### 1. Publicação em múltiplas plataformas
-Atualmente `planning_automations.platform` é `TEXT` (valor único). Para publicar o mesmo conteúdo em múltiplas plataformas, precisamos de uma nova coluna.
+### Problema 2: Threads - Nenhuma automação configurada
+As credenciais do Threads (conta `madureira0x`) estão válidas, mas **não existe nenhuma automação** direcionada ao Threads.
 
-### 2. Threads NÃO são enviadas corretamente no auto-publish
-**BUG CRÍTICO**: Na linha 1529 do `process-automations`, o auto-publish envia apenas:
-```
-{ clientId, platform, content: generatedContent, mediaUrls }
-```
-Mas NÃO envia `threadItems` — mesmo quando `thread_tweets` foram parseados e salvos no metadata. O `late-post` suporta `threadItems`, mas nunca os recebe do auto-publish. Resultado: threads são publicadas como um post único.
+### Problema 3: Bug no retry de imagem
+No `process-automations`, linha ~1322, o retry de geração de imagem referencia a variável `resolvedImagePrompt` que **não existe** no escopo (o nome correto é `fullImagePrompt`). Isso faz o retry falhar silenciosamente.
 
-### 3. Carrosseis NÃO são enviados corretamente
-Mesmo problema: `carousel_slides` são parseados e salvos no metadata, mas o auto-publish não envia `mediaItems` com a estrutura correta de carrossel para o Instagram.
-
-### 4. Reels/Vídeos
-O sistema já suporta vídeos via `mediaItems` com type `video`. Não há bug estrutural, mas o auto-publish precisa passar `mediaItems` ao invés de apenas `mediaUrls` quando há vídeo.
+### Problema 4: Qualidade do conteúdo LinkedIn repetitivo
+Os posts gerados para LinkedIn estão todos girando em torno do mesmo tema ("clareza vs complexidade em Web3"). Falta diversidade temática e o sistema de variação (que existe para tweets) não está implementado para LinkedIn.
 
 ---
 
-## Mudanças
+## Plano de Implementação
 
-### A. Schema: Adicionar `platforms` (array) à tabela
-```sql
-ALTER TABLE planning_automations ADD COLUMN platforms TEXT[] DEFAULT NULL;
-```
-Quando `platforms` está preenchido, o sistema publica em todas as plataformas listadas. O campo `platform` existente continua como fallback.
+### 1. Corrigir bug do retry de imagem no process-automations
+- Substituir `resolvedImagePrompt` por `fullImagePrompt` na linha do retry
 
-### B. Edge Function `process-automations` — Corrigir auto-publish
-1. **Threads**: Quando `metadata.thread_tweets` existe, montar `threadItems` e enviá-los ao `late-post`
-2. **Carrosseis**: Quando `metadata.carousel_slides` existe, montar `mediaItems` com ordem correta
-3. **Multi-plataforma**: Loop de publicação para cada plataforma em `platforms[]`
-4. **Vídeos**: Detectar tipo de mídia e enviar como `mediaItems` com type correto
+### 2. Criar sistema de variação para LinkedIn (anti-repetição)
+Adicionar categorias editoriais para LinkedIn similares ao `GM_VARIATION_CATEGORIES` dos tweets:
+- **Artigo de Opinião**: Análise contrarian de tendência, dados concretos, framework próprio
+- **Building in Public**: Bastidores reais, números, aprendizados honestos, erros
+- **Case & Prova Social**: Resultados de clientes, métricas antes/depois, processo
 
-### C. Hook `usePlanningAutomations` — Suportar `platforms[]`
-Adicionar campo `platforms` ao tipo e às operações de create/update.
+Cada automação LinkedIn receberá um `variation_index` rotativo com sub-temas específicos para evitar repetição.
 
-### D. UI de criação de automação — Multi-select de plataformas
-Permitir selecionar múltiplas plataformas ao criar/editar automação.
+### 3. Melhorar prompts LinkedIn com estratégia de conteúdo
+Enriquecer os prompts usando o guia de conteúdo do Madureira (`public/clients/madureira/guia-conteudo.md`):
+- Incorporar os 5 pilares de conteúdo como rotação temática
+- Usar tom de voz definido: técnico mas didático, direto, visionário
+- Adicionar instruções de formatação específicas para LinkedIn (quebras de linha, storytelling, CTA)
+
+### 4. Habilitar auto_publish para LinkedIn (com revisão inteligente)
+Alterar as 3 automações de LinkedIn para `auto_publish: true` para que os posts sejam publicados automaticamente após geração.
+
+### 5. Criar automações para Threads
+Criar 2-3 automações de Threads para o perfil Madureira:
+- **Threads Diário** (daily): Repurpose do melhor tweet do dia ou insight rápido
+- **Threads Semanal** (weekly): Versão expandida de um tweet de alta performance
+
+### 6. Melhorar geração de imagem para LinkedIn
+- Ajustar o aspect ratio para LinkedIn: `1.91:1` (landscape) em vez de `1:1`
+- Enriquecer prompts de imagem com contexto profissional/corporativo
+- Usar modelo `google/gemini-3-pro-image-preview` para maior qualidade nas imagens de LinkedIn
 
 ---
 
-## Detalhes Técnicos
-
-### Fix do auto-publish (mais crítico):
-
-```typescript
-// ANTES (bugado):
-body: JSON.stringify({
-  clientId: automation.client_id,
-  platform: derivedPlatform,
-  content: generatedContent,
-  mediaUrls: mediaUrls,
-})
-
-// DEPOIS (correto):
-const publishBody: Record<string, unknown> = {
-  clientId: automation.client_id,
-  platform: targetPlatform,
-  content: generatedContent,
-  planningItemId: newItem.id,
-};
-
-// Threads: enviar threadItems estruturados
-if (automation.content_type === 'thread' && updatedMetadata.thread_tweets) {
-  publishBody.threadItems = updatedMetadata.thread_tweets.map(t => ({
-    text: t.text,
-    media_urls: t.media_urls,
-  }));
-}
-
-// Carrossel/Vídeo: enviar mediaItems com tipo e ordem
-if (mediaUrls.length > 0) {
-  publishBody.mediaItems = mediaUrls.map((url, i) => ({
-    url,
-    type: url.match(/\.(mp4|mov|webm)$/i) ? 'video' : 'image',
-  }));
-} 
-```
-
-### Multi-plataforma loop:
-```typescript
-const targetPlatforms = automation.platforms?.length > 0 
-  ? automation.platforms 
-  : (derivedPlatform ? [derivedPlatform] : []);
-
-for (const targetPlatform of targetPlatforms) {
-  // publicar em cada plataforma...
-}
-```
+### Arquivos a modificar
+1. `supabase/functions/process-automations/index.ts` - Fix retry bug, adicionar variação LinkedIn, melhorar prompts
+2. Database: Atualizar `planning_automations` para habilitar auto_publish nas automações LinkedIn e criar novas automações Threads
 
