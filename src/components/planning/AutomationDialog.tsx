@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Calendar, Rss, Webhook, Sparkles, Send, AlertCircle, Loader2, CheckCircle2, XCircle, Image, ExternalLink, Copy, ChevronDown, ChevronUp, Palette } from 'lucide-react';
+import { Calendar, Rss, Webhook, Sparkles, Send, AlertCircle, Loader2, CheckCircle2, XCircle, Image, ExternalLink, Copy, ChevronDown, ChevronUp, Palette, Twitter, Linkedin, Instagram, AtSign, Video, Youtube, Facebook, Mail, FileText, Check } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -38,7 +38,9 @@ import {
 import { useClients } from '@/hooks/useClients';
 import { usePlanningItems } from '@/hooks/usePlanningItems';
 import { supabase } from '@/integrations/supabase/client';
-import { CONTENT_TYPE_OPTIONS, CONTENT_TO_PLATFORM } from '@/types/contentTypes';
+import { CONTENT_TYPE_OPTIONS, CONTENT_TO_PLATFORM, ALL_PUBLISH_PLATFORMS } from '@/types/contentTypes';
+import { useClientPlatformStatus } from '@/hooks/useClientPlatformStatus';
+import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
 interface AutomationDialogProps {
@@ -57,17 +59,17 @@ const WEEKDAYS = [
   { value: 6, label: 'Sábado' },
 ];
 
-const PLATFORMS = [
-  { value: 'instagram', label: 'Instagram' },
-  { value: 'twitter', label: 'Twitter/X' },
-  { value: 'threads', label: 'Threads' },
-  { value: 'linkedin', label: 'LinkedIn' },
-  { value: 'facebook', label: 'Facebook' },
-  { value: 'youtube', label: 'YouTube' },
-  { value: 'tiktok', label: 'TikTok' },
-  { value: 'newsletter', label: 'Newsletter' },
-  { value: 'blog', label: 'Blog' },
-];
+const platformLucideIcons: Record<string, React.ElementType> = {
+  twitter: Twitter,
+  linkedin: Linkedin,
+  instagram: Instagram,
+  threads: AtSign,
+  tiktok: Video,
+  youtube: Youtube,
+  facebook: Facebook,
+  newsletter: Mail,
+  blog: FileText,
+};
 
 // Template variables that can be used in prompts
 const TEMPLATE_VARIABLES = [
@@ -116,13 +118,14 @@ export function AutomationDialog({ open, onOpenChange, automation }: AutomationD
   const { createAutomation, updateAutomation } = usePlanningAutomations();
   const { clients } = useClients();
   const { columns } = usePlanningItems();
+  const [clientId, setClientId] = useState<string>('');
+  const { getPlatformStatus, canAutoPublish } = useClientPlatformStatus(clientId || null);
   
   const isEditing = !!automation;
 
   // Form state
   const [name, setName] = useState('');
   const [triggerType, setTriggerType] = useState<TriggerType>('schedule');
-  const [clientId, setClientId] = useState<string>('');
   const [columnId, setColumnId] = useState<string>('');
   const [platform, setPlatform] = useState<string>('');
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
@@ -710,31 +713,62 @@ export function AutomationDialog({ open, onOpenChange, automation }: AutomationD
             </div>
 
             <div className="space-y-2">
-              <Label>Plataformas de publicação</Label>
-              <div className="flex flex-wrap gap-2">
-                {PLATFORMS.map((p) => (
-                  <div key={p.value} className="flex items-center space-x-2">
-                    <Checkbox
-                      id={`platform-${p.value}`}
-                      checked={selectedPlatforms.includes(p.value)}
-                      onCheckedChange={(checked) => {
-                        if (checked) {
+              <Label className="text-xs text-muted-foreground">Publicar em:</Label>
+              <div className="grid grid-cols-3 gap-1.5">
+                {ALL_PUBLISH_PLATFORMS.map((p) => {
+                  const status = getPlatformStatus(p.value as any);
+                  const isConnected = status?.hasApi && status?.isValid;
+                  const isSelected = selectedPlatforms.includes(p.value);
+                  const IconComponent = platformLucideIcons[p.value];
+                  return (
+                    <button
+                      key={p.value}
+                      type="button"
+                      onClick={() => {
+                        if (isSelected) {
+                          setSelectedPlatforms(prev => prev.filter(v => v !== p.value));
+                        } else {
                           setSelectedPlatforms(prev => [...prev, p.value]);
                           if (!platform) setPlatform(p.value);
-                        } else {
-                          setSelectedPlatforms(prev => prev.filter(v => v !== p.value));
                         }
                       }}
-                    />
-                    <label htmlFor={`platform-${p.value}`} className="text-sm cursor-pointer">
-                      {p.label}
-                    </label>
-                  </div>
-                ))}
+                      className={cn(
+                        "flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border text-xs font-medium transition-all duration-150",
+                        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                        isSelected
+                          ? "border-primary/50 bg-primary/10 text-foreground shadow-sm"
+                          : "border-border/60 bg-card text-muted-foreground hover:border-border hover:bg-accent/50",
+                        !isConnected && "opacity-40"
+                      )}
+                      style={isSelected ? { borderColor: p.brandColor, backgroundColor: `${p.brandColor}15` } : undefined}
+                    >
+                      {IconComponent && (
+                        <IconComponent
+                          className="h-3.5 w-3.5 shrink-0"
+                          style={isSelected ? { color: p.brandColor } : undefined}
+                        />
+                      )}
+                      <span className="truncate">{p.label}</span>
+                      {isSelected && (
+                        <Check className="h-3 w-3 ml-auto shrink-0 text-primary" style={{ color: p.brandColor }} />
+                      )}
+                      {!isSelected && isConnected && (
+                        <span className="ml-auto h-1.5 w-1.5 rounded-full bg-emerald-500 shrink-0" />
+                      )}
+                    </button>
+                  );
+                })}
               </div>
-              <p className="text-xs text-muted-foreground">
-                Selecione uma ou mais plataformas para publicar o mesmo conteúdo
-              </p>
+              {selectedPlatforms.length > 0 && clientId && (
+                <p className="text-[10px] text-muted-foreground">
+                  {selectedPlatforms.filter(p => canAutoPublish(p as any)).length} de {selectedPlatforms.length} conectada(s) para auto-publish
+                </p>
+              )}
+              {!clientId && (
+                <p className="text-[10px] text-muted-foreground">
+                  Selecione um perfil para ver status de conexão
+                </p>
+              )}
             </div>
           </div>
 
@@ -885,7 +919,7 @@ export function AutomationDialog({ open, onOpenChange, automation }: AutomationD
               <Switch 
                 checked={autoPublish} 
                 onCheckedChange={setAutoPublish}
-                disabled={!autoGenerate || (selectedPlatforms.length === 0 && !platform) || !clientId}
+                disabled={!autoGenerate || selectedPlatforms.length === 0 || !clientId || selectedPlatforms.filter(p => canAutoPublish(p as any)).length === 0}
               />
             </div>
 
@@ -893,17 +927,20 @@ export function AutomationDialog({ open, onOpenChange, automation }: AutomationD
               <div className="flex items-start gap-2 p-3 bg-amber-500/10 rounded-lg">
                 <AlertCircle className="h-4 w-4 text-amber-500 mt-0.5 flex-shrink-0" />
                 <p className="text-sm text-amber-700 dark:text-amber-400">
-                  Requer conta conectada (Late API) para as plataformas selecionadas.
-                  Certifique-se de que as credenciais estão configuradas no perfil.
+                  Apenas plataformas conectadas serão publicadas automaticamente.
+                  {selectedPlatforms.filter(p => !canAutoPublish(p as any)).length > 0 && (
+                    <> As demais serão criadas como rascunho.</>
+                  )}
                 </p>
               </div>
             )}
 
-            {(!autoGenerate || (selectedPlatforms.length === 0 && !platform) || !clientId) && (
+            {(!autoGenerate || selectedPlatforms.length === 0 || !clientId) && (
               <p className="text-xs text-muted-foreground">
                 {!autoGenerate && "Ative a geração de conteúdo para habilitar. "}
-                {selectedPlatforms.length === 0 && !platform && "Selecione ao menos uma plataforma. "}
+                {selectedPlatforms.length === 0 && "Selecione ao menos uma plataforma. "}
                 {!clientId && "Selecione um perfil."}
+                {autoGenerate && selectedPlatforms.length > 0 && clientId && selectedPlatforms.filter(p => canAutoPublish(p as any)).length === 0 && "Nenhuma plataforma selecionada está conectada."}
               </p>
             )}
           </div>
