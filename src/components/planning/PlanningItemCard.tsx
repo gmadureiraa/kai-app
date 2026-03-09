@@ -78,8 +78,13 @@ export const PlanningItemCard = memo(function PlanningItemCard({
   const { getPublicationMode, getPlatformStatus } = useClientPlatformStatus(item.client_id);
   
   const platform = item.platform || 'other';
-  const PlatformIcon = platformIcons[platform] || FileText;
-  const dotColor = platformDotColors[platform] || 'bg-muted-foreground';
+  const metadata = item.metadata as any || {};
+  const targetPlatforms: string[] = metadata.target_platforms?.length > 0
+    ? metadata.target_platforms
+    : [platform];
+  const primaryPlatform = targetPlatforms[0] || platform;
+  const PlatformIcon = platformIcons[primaryPlatform] || FileText;
+  const dotColor = platformDotColors[primaryPlatform] || 'bg-muted-foreground';
 
   const displayDate = item.scheduled_at || item.due_date;
   const isFailed = item.status === 'failed';
