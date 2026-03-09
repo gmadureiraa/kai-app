@@ -1,56 +1,63 @@
 
 
-## Diagnóstico: Por que as automações não estão postando
+# Plano: Preencher Voice Profile Completo de Cada Cliente
 
-### Problema 1: LinkedIn - Itens criados mas nunca publicados
-As 3 automações de LinkedIn (Artigo de Opinião, Building in Public, Case & Prova Social) estão **funcionando corretamente** na geração de conteúdo e imagens. O problema é que todas estão com `auto_publish: false`. Os itens são criados com status "idea" no planejamento e ficam lá esperando publicação manual. Nenhum deles jamais é publicado automaticamente.
+## Análise por Cliente
 
-### Problema 2: Threads - Nenhuma automação configurada
-As credenciais do Threads (conta `madureira0x`) estão válidas, mas **não existe nenhuma automação** direcionada ao Threads.
+Baseado nos conteúdos da biblioteca, guias de copywriting, newsletters e READMEs, vou popular o campo `voice_profile` (JSON com `tone`, `use[]`, `avoid[]`) de cada cliente via UPDATE direto no banco.
 
-### Problema 3: Bug no retry de imagem
-No `process-automations`, linha ~1322, o retry de geração de imagem referencia a variável `resolvedImagePrompt` que **não existe** no escopo (o nome correto é `fullImagePrompt`). Isso faz o retry falhar silenciosamente.
+### Clientes e seus dados disponíveis:
 
-### Problema 4: Qualidade do conteúdo LinkedIn repetitivo
-Os posts gerados para LinkedIn estão todos girando em torno do mesmo tema ("clareza vs complexidade em Web3"). Falta diversidade temática e o sistema de variação (que existe para tweets) não está implementado para LinkedIn.
-
----
-
-## Plano de Implementação
-
-### 1. Corrigir bug do retry de imagem no process-automations
-- Substituir `resolvedImagePrompt` por `fullImagePrompt` na linha do retry
-
-### 2. Criar sistema de variação para LinkedIn (anti-repetição)
-Adicionar categorias editoriais para LinkedIn similares ao `GM_VARIATION_CATEGORIES` dos tweets:
-- **Artigo de Opinião**: Análise contrarian de tendência, dados concretos, framework próprio
-- **Building in Public**: Bastidores reais, números, aprendizados honestos, erros
-- **Case & Prova Social**: Resultados de clientes, métricas antes/depois, processo
-
-Cada automação LinkedIn receberá um `variation_index` rotativo com sub-temas específicos para evitar repetição.
-
-### 3. Melhorar prompts LinkedIn com estratégia de conteúdo
-Enriquecer os prompts usando o guia de conteúdo do Madureira (`public/clients/madureira/guia-conteudo.md`):
-- Incorporar os 5 pilares de conteúdo como rotação temática
-- Usar tom de voz definido: técnico mas didático, direto, visionário
-- Adicionar instruções de formatação específicas para LinkedIn (quebras de linha, storytelling, CTA)
-
-### 4. Habilitar auto_publish para LinkedIn (com revisão inteligente)
-Alterar as 3 automações de LinkedIn para `auto_publish: true` para que os posts sejam publicados automaticamente após geração.
-
-### 5. Criar automações para Threads
-Criar 2-3 automações de Threads para o perfil Madureira:
-- **Threads Diário** (daily): Repurpose do melhor tweet do dia ou insight rápido
-- **Threads Semanal** (weekly): Versão expandida de um tweet de alta performance
-
-### 6. Melhorar geração de imagem para LinkedIn
-- Ajustar o aspect ratio para LinkedIn: `1.91:1` (landscape) em vez de `1:1`
-- Enriquecer prompts de imagem com contexto profissional/corporativo
-- Usar modelo `google/gemini-3-pro-image-preview` para maior qualidade nas imagens de LinkedIn
+| Cliente | Fontes Analisadas | Status Atual |
+|---------|-------------------|--------------|
+| **Gabriel Madureira** | guia-conteudo.md (92 linhas), README.md, identity_guide ✅ | voice_profile vazio |
+| **NeoBankLess** | guia-copywriting.md (1005 linhas com USE/AVOID explícitos) | voice_profile vazio |
+| **Layla Foz** | 6 newsletters completas, análise de padrões, temas | voice_profile vazio |
+| **Defiverso** | resumos-semanais.md, outras-newsletters.md | voice_profile vazio |
+| **Kaleidos** | README.md (equipe, serviços, tom) | voice_profile vazio |
+| **Lucas Amendola** | identity_guide ✅, sem docs em /public | voice_profile vazio |
 
 ---
 
-### Arquivos a modificar
-1. `supabase/functions/process-automations/index.ts` - Fix retry bug, adicionar variação LinkedIn, melhorar prompts
-2. Database: Atualizar `planning_automations` para habilitar auto_publish nas automações LinkedIn e criar novas automações Threads
+## Implementação
+
+### Fase Única: 6 UPDATEs no banco
+
+Para cada cliente, um `UPDATE clients SET voice_profile = '{...}'` com:
+
+**1. Gabriel Madureira** — Extraído do guia-conteudo.md
+- **Tone:** "Técnico mas didático, direto e sem rodeios, visionário e provocador, transparente (building in public)"
+- **Use:** "builders", "na prática", "o que funciona", "growth", "framework", "hack", "tá ligado", "bora", "vou te mostrar", "full-stack", "Web3", "automação", "na real", "olha só", "case real"
+- **Avoid:** "certamente", "vale ressaltar", "é importante notar", "neste artigo vamos", "sem mais delongas", "espero que goste", "descubra como", "vou te ensinar", "queridos seguidores", "fique à vontade"
+
+**2. NeoBankLess** — Extraído do guia-copywriting.md (seções 7 e 8)
+- **Tone:** "Direto e objetivo, confiante (não arrogante), disruptivo, empoderador, acessível"
+- **Use:** "Dolarize", "Proteja", "Controle", "Seu dinheiro. Suas regras.", "Bancos sem bancos", "Taxa de 0,5%", "Autocustódia", "Conta global", "Sem fronteiras", "Transparência total", "Em segundos", "Link na bio", "Para quem quer mais do que um banco"
+- **Avoid:** "yield farming", "liquidity pools", "gas fees", "o melhor", "incrível", "fantástico", "revolucionário", "pensando fora da caixa", "soluções inovadoras", "experiência única", "recomenda-se", "caro leitor", "certamente", "vale ressaltar"
+
+**3. Layla Foz** — Extraído das 6 newsletters (padrões de escrita)
+- **Tone:** "Íntima e acolhedora, poética mas acessível, reflexiva e provocadora, feminina e empoderada"
+- **Use:** "Deusa", "me conta uma coisa", "já parou pra pensar", "na prática", "entre eu e você", "a verdade é que", "e se eu te contar que", "respira fundo", "não é sobre", "é sobre"
+- **Avoid:** "certamente", "vale ressaltar", "neste texto vamos abordar", "é importante salientar", "caros leitores", "confira", "aprenda a", "dicas incríveis", "vamos falar sobre", "segue abaixo", "você sabia que"
+
+**4. Defiverso** — Extraído dos resumos semanais
+- **Tone:** "Técnico mas acessível, direto ao ponto, informativo com emojis contextuais, foco em ação prática"
+- **Use:** "GM, humanos do criptoverso", "👽", "bora entender", "na prática", "por que isso importa", "o que isso muda pra você", "resumo da semana", "fato:", "contexto:", "impacto:"
+- **Avoid:** "certamente", "vale ressaltar", "é importante notar", "caro leitor", "neste artigo", "sem mais delongas", "confira", "descubra", "incrível", "fantástico", "revolucionário"
+
+**5. Kaleidos** — Extraído do README
+- **Tone:** "Profissional mas acessível, focado em resultados e dados, inspirador e direto ao ponto"
+- **Use:** "resultado", "crescimento", "viralizar", "estratégia", "criativo", "conteúdo que converte", "dados reais", "case de sucesso", "na prática", "sem enrolação"
+- **Avoid:** "certamente", "vale ressaltar", "é importante notar", "soluções inovadoras", "somos os melhores", "empresa líder", "parceria de sucesso", "fique à vontade", "sem mais delongas", "experiência única"
+
+**6. Lucas Amendola** — Baseado no segmento (Finanças/YouTube), sem docs detalhados, perfil mais básico
+- **Tone:** "Educativo, acessível, analítico, descontraído"
+- **Use:** "bora analisar", "na prática", "olha isso", "fato importante", "gráfico mostra", "o que isso significa", "resumindo"
+- **Avoid:** "certamente", "vale ressaltar", "é importante notar", "caros investidores", "sem mais delongas", "confira", "descubra", "incrível"
+
+---
+
+## Execução
+
+6 chamadas UPDATE ao banco via insert tool, uma por cliente. Sem mudança de schema, sem mudança de código — apenas dados.
 
