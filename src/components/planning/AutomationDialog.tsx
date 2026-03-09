@@ -362,6 +362,7 @@ export function AutomationDialog({ open, onOpenChange, automation }: AutomationD
       auto_generate_image: autoGenerateImage,
       image_prompt_template: autoGenerateImage ? imagePromptTemplate : null,
       image_style: autoGenerateImage ? imageStyle : null,
+      image_reference_ids: autoGenerateImage && imageReferenceIds.length > 0 ? imageReferenceIds : null,
     };
 
     if (isEditing && automation) {
