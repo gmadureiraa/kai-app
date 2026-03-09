@@ -504,10 +504,11 @@ ${cleanContent ? `📄 CONTEÚDO COMPLETO:\n${cleanContent}` : ''}
 
 📋 INSTRUÇÕES:
 1. Siga RIGOROSAMENTE as regras do formato "${formatLabel}"
-2. Mantenha o tom de voz e estilo do cliente
-3. Crie conteúdo PRONTO PARA PUBLICAR - sem placeholders ou instruções
-4. Use linguagem natural e envolvente
-5. ${mediaUrls.length > 0 ? `Há ${mediaUrls.length} imagens disponíveis - faça referência a elas onde apropriado` : 'Não há imagens disponíveis'}
+2. Siga RIGOROSAMENTE o tom de voz e as expressões do Voice Profile do cliente. Use as expressões da lista "USE" e evite absolutamente as da lista "EVITE".
+3. Mantenha o tom de voz e estilo do cliente conforme o identity_guide
+4. Crie conteúdo PRONTO PARA PUBLICAR - sem placeholders ou instruções
+5. Use linguagem natural e envolvente
+6. ${mediaUrls.length > 0 ? `Há ${mediaUrls.length} imagens disponíveis - faça referência a elas onde apropriado` : 'Não há imagens disponíveis'}
 
 🎯 RESULTADO ESPERADO:
 Conteúdo final completo, formatado e pronto para publicar como ${formatLabel}.`;
