@@ -23,6 +23,8 @@ interface YouTubeVideo {
   subscribers_gained: number | null;
   impressions: number | null;
   click_rate: number | null;
+  likes: number | null;
+  comments: number | null;
   thumbnail_url: string | null;
   duration_seconds: number | null;
   transcript?: string | null;
