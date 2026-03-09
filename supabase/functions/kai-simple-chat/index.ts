@@ -164,6 +164,8 @@ interface PlanningIntent {
   topic: string | null;
   missingInfo: string[];
   isFollowUp?: boolean;
+  analyzeFirst?: boolean;
+  analyzeSource?: "youtube" | "instagram" | "linkedin" | "all";
 }
 
 function getPlatformEmoji(platform: string): string {
@@ -253,10 +255,45 @@ function detectPlanningIntent(message: string, history?: HistoryMessage[]): Plan
     /montar?\s+(um\s+)?cronograma/i,
     /distribu(ir|a)\s+ao\s+longo\s+da\s+semana/i,
   ];
+
+  // Composite patterns: analyze metrics THEN create cards
+  const analyzeAndPlanPatterns = [
+    /analis[ea].*(?:e\s+)?(?:cri[ea]|sub[ea]|coloca|adiciona|gera|monta).*(?:planejamento|cards?|temas?)/i,
+    /(?:com\s+base|baseado)\s+(?:nos?|nas?)\s+(?:melhores?|top|dados).*(?:cri[ea]|sub[ea]|gera|monta).*(?:planejamento|cards?|temas?)/i,
+    /(?:cri[ea]|gera|monta|sub[ea]).*(?:temas?|cards?|conte[uú]dos?).*(?:com\s+base|baseado|a\s+partir).*(?:an[aá]lise|melhores?|performance|m[eé]tricas?)/i,
+    /(?:sugir[ea]|proponha).*temas?.*(?:e\s+)?(?:adiciona|suba|coloca).*planejamento/i,
+    /analis[ea].*(?:melhores?|top).*(?:conte[uú]dos?|v[ií]deos?|posts?).*(?:e\s+)?(?:cri[ea]|gera).*(?:novos?|temas?|cards?)/i,
+  ];
   
   for (const pattern of planningPatterns) {
     if (pattern.test(lowerMessage)) { result.isPlanning = true; break; }
   }
+
+  // Check composite analyze+plan patterns
+  if (!result.isPlanning) {
+    for (const pattern of analyzeAndPlanPatterns) {
+      if (pattern.test(lowerMessage)) {
+        result.isPlanning = true;
+        result.analyzeFirst = true;
+        break;
+      }
+    }
+  }
+
+  // Detect analyzeFirst even when planning was already detected
+  if (result.isPlanning && !result.analyzeFirst) {
+    const hasAnalyzeKeywords = /analis[ea]|com\s+base|baseado|melhores?|top\s+\d*\s*(conte[uú]dos?|v[ií]deos?|posts?)|performance|m[eé]tricas?/i.test(lowerMessage);
+    if (hasAnalyzeKeywords) result.analyzeFirst = true;
+  }
+
+  // Detect analyze source platform
+  if (result.analyzeFirst) {
+    if (/youtube|v[ií]deos?/i.test(lowerMessage)) result.analyzeSource = "youtube";
+    else if (/instagram|insta|posts?\s+do\s+insta/i.test(lowerMessage)) result.analyzeSource = "instagram";
+    else if (/linkedin/i.test(lowerMessage)) result.analyzeSource = "linkedin";
+    else result.analyzeSource = "all";
+  }
+
   if (!result.isPlanning) return result;
   
   if (/distribu(ir|a)|ao\s+longo|semana/i.test(lowerMessage)) result.action = "distribute";
@@ -714,7 +751,7 @@ async function fetchMetricsContext(
   const postsLimit = isSpecificQuery ? 10 : 20;
 
   // Fetch all platforms in parallel
-  const [metricsResult, instaResult, twitterResult, linkedinResult] = await Promise.all([
+  const [metricsResult, instaResult, twitterResult, linkedinResult, youtubeResult] = await Promise.all([
     supabase.from("platform_metrics").select("*")
       .eq("client_id", clientId)
       .gte("metric_date", queryStart).lte("metric_date", queryEnd)
@@ -734,14 +771,19 @@ async function fetchMetricsContext(
       .select("tweet_text, tweet_metrics, tweet_created_at, author_username, status")
       .eq("client_id", clientId)
       .order("created_at", { ascending: false }).limit(10),
+    supabase.from("youtube_videos")
+      .select("id, title, total_views, likes, comments, published_at, duration_seconds, impressions, click_rate, subscribers_gained, watch_hours, transcript")
+      .eq("client_id", clientId)
+      .order("total_views", { ascending: false, nullsFirst: false }).limit(postsLimit),
   ]);
 
   const metrics: any[] = metricsResult.data || [];
   const instaPosts: any[] = instaResult.data || [];
   const linkedinPosts: any[] = linkedinResult.data || [];
   const twitterData: any[] = twitterResult.data || [];
+  const youtubeVideos: any[] = youtubeResult.data || [];
 
-  if (metrics.length === 0 && instaPosts.length === 0 && linkedinPosts.length === 0) {
+  if (metrics.length === 0 && instaPosts.length === 0 && linkedinPosts.length === 0 && youtubeVideos.length === 0) {
     return `\n## Dados de Performance\nNenhum dado encontrado para o período de ${queryStart} a ${queryEnd}.\n`;
   }
 
@@ -840,6 +882,37 @@ async function fetchMetricsContext(
       context += `${i + 1}. @${t.author_username}: ${t.tweet_text?.substring(0, 100) || ''}${t.tweet_text?.length > 100 ? '...' : ''}\n`;
       context += `   Status: ${t.status || 'pending'}\n`;
     });
+  }
+
+  // YouTube videos
+  if (youtubeVideos.length > 0) {
+    const totalViews = youtubeVideos.reduce((sum: number, v: any) => sum + (v.total_views || 0), 0);
+    const avgViews = Math.round(totalViews / youtubeVideos.length);
+    const totalWatchHours = youtubeVideos.reduce((sum: number, v: any) => sum + (v.watch_hours || 0), 0);
+
+    context += `\n### YouTube (${youtubeVideos.length} vídeos)\n`;
+    context += `**Totais:** ${totalViews.toLocaleString('pt-BR')} views | ${totalWatchHours.toFixed(1)}h assistidas\n`;
+    context += `**Média:** ${avgViews.toLocaleString('pt-BR')} views/vídeo\n`;
+
+    if (isSpecificQuery) {
+      context += `\n**Ranking por Views:**\n`;
+      youtubeVideos.forEach((v: any, i: number) => {
+        const pubDate = v.published_at ? formatDateBR(v.published_at.split('T')[0]) : '';
+        context += `\n**#${i + 1} - ${(v.total_views || 0).toLocaleString('pt-BR')} views** (${pubDate})\n`;
+        context += `Título: ${v.title}\n`;
+        context += `Likes: ${(v.likes || 0).toLocaleString('pt-BR')} | Comments: ${v.comments || 0} | CTR: ${(v.click_rate || 0).toFixed(2)}%\n`;
+        if (v.duration_seconds) context += `Duração: ${Math.floor(v.duration_seconds / 60)}min\n`;
+        if (v.subscribers_gained) context += `Inscritos ganhos: +${v.subscribers_gained}\n`;
+        if (v.transcript && i < 3) context += `Transcrição: ${v.transcript.substring(0, 400)}\n`;
+      });
+    } else {
+      context += `\n**Top 5 por Views:**\n`;
+      youtubeVideos.slice(0, 5).forEach((v: any, i: number) => {
+        const pubDate = v.published_at ? formatDateBR(v.published_at.split('T')[0]) : '';
+        context += `${i + 1}. ${v.title}\n`;
+        context += `   🎬 ${(v.total_views || 0).toLocaleString('pt-BR')} views | ${(v.likes || 0).toLocaleString('pt-BR')} likes | ${pubDate}\n`;
+      });
+    }
   }
 
   return context.substring(0, MAX_METRICS_CONTEXT_LENGTH);
@@ -1013,13 +1086,75 @@ async function generatePlanningCards(
       if (scrapeData?.data?.markdown) urlContext = scrapeData.data.markdown.substring(0, 3000);
     }
   }
+
+  // Fetch metrics context when analyzeFirst is enabled
+  let metricsAnalysisContext = "";
+  if (intent.analyzeFirst) {
+    const fetchPromises: Promise<any>[] = [];
+    
+    if (intent.analyzeSource === "youtube" || intent.analyzeSource === "all") {
+      fetchPromises.push(
+        supabase.from("youtube_videos")
+          .select("title, total_views, likes, comments, published_at, duration_seconds, click_rate, subscribers_gained, watch_hours, transcript")
+          .eq("client_id", clientId)
+          .order("total_views", { ascending: false, nullsFirst: false }).limit(30)
+          .then((r: any) => ({ platform: "youtube", data: r.data || [] }))
+      );
+    }
+    if (intent.analyzeSource === "instagram" || intent.analyzeSource === "all") {
+      fetchPromises.push(
+        supabase.from("instagram_posts")
+          .select("caption, full_content, likes, comments, saves, shares, reach, engagement_rate, posted_at, post_type")
+          .eq("client_id", clientId)
+          .order("engagement_rate", { ascending: false, nullsFirst: false }).limit(30)
+          .then((r: any) => ({ platform: "instagram", data: r.data || [] }))
+      );
+    }
+    if (intent.analyzeSource === "linkedin" || intent.analyzeSource === "all") {
+      fetchPromises.push(
+        supabase.from("linkedin_posts")
+          .select("content, full_content, likes, comments, shares, impressions, engagement_rate, posted_at")
+          .eq("client_id", clientId)
+          .order("likes", { ascending: false, nullsFirst: false }).limit(30)
+          .then((r: any) => ({ platform: "linkedin", data: r.data || [] }))
+      );
+    }
+
+    const results = await Promise.all(fetchPromises);
+    
+    for (const result of results) {
+      if (result.data.length === 0) continue;
+      
+      if (result.platform === "youtube") {
+        metricsAnalysisContext += `\n## Top ${result.data.length} Vídeos do YouTube (por views)\n`;
+        result.data.forEach((v: any, i: number) => {
+          const pubDate = v.published_at ? v.published_at.split('T')[0] : '';
+          const duration = v.duration_seconds ? `${Math.floor(v.duration_seconds / 60)}min` : '';
+          metricsAnalysisContext += `${i + 1}. "${v.title}" — ${(v.total_views || 0).toLocaleString('pt-BR')} views | ${(v.likes || 0).toLocaleString('pt-BR')} likes | ${v.comments || 0} comments | CTR: ${(v.click_rate || 0).toFixed(2)}% | ${duration} | ${pubDate}\n`;
+          if (v.transcript && i < 5) metricsAnalysisContext += `   Resumo: ${v.transcript.substring(0, 200)}...\n`;
+        });
+      } else if (result.platform === "instagram") {
+        metricsAnalysisContext += `\n## Top ${result.data.length} Posts do Instagram (por engajamento)\n`;
+        result.data.forEach((p: any, i: number) => {
+          const caption = (p.full_content || p.caption || "").substring(0, 120);
+          metricsAnalysisContext += `${i + 1}. ${caption}${caption.length >= 120 ? '...' : ''} — ${p.engagement_rate?.toFixed(2) || 0}% eng | ${(p.likes || 0).toLocaleString('pt-BR')} likes | Tipo: ${p.post_type || 'post'}\n`;
+        });
+      } else if (result.platform === "linkedin") {
+        metricsAnalysisContext += `\n## Top ${result.data.length} Posts do LinkedIn (por likes)\n`;
+        result.data.forEach((p: any, i: number) => {
+          const content = (p.full_content || p.content || "").substring(0, 120);
+          metricsAnalysisContext += `${i + 1}. ${content}${content.length >= 120 ? '...' : ''} — ${(p.likes || 0).toLocaleString('pt-BR')} likes | ${p.comments || 0} comments\n`;
+        });
+      }
+    }
+  }
   
-  if (LOVABLE_API_KEY && (intent.topic || urlContext)) {
+  if (LOVABLE_API_KEY && (intent.topic || urlContext || intent.analyzeFirst)) {
     const platformInstructions: Record<string, string> = {
       instagram: "Posts para Instagram: hook forte, máximo 2200 chars, poucos emojis, estrutura clara",
       twitter: "Tweets: MÁXIMO 280 caracteres, ZERO emojis no corpo, ZERO hashtags, gancho forte",
       linkedin: "Posts LinkedIn: profissionais, storytelling, insights",
-      youtube: "Títulos/descrições para YouTube: SEO otimizado",
+      youtube: "Títulos/descrições para YouTube: SEO otimizado, títulos atrativos com hook claro",
       newsletter: "Títulos para newsletter: valor claro, CTA forte",
       tiktok: "Ideias para TikTok: trends, ganchos virais",
     };
@@ -1027,17 +1162,36 @@ async function generatePlanningCards(
     let userConstraints = "";
     if (userInstructions?.skipImages) userConstraints += "\n⛔ NÃO inclua imagens. Apenas texto.";
     if (userInstructions?.noEmojis) userConstraints += "\n⛔ ZERO emojis.";
+
+    let analysisInstructions = "";
+    if (intent.analyzeFirst && metricsAnalysisContext) {
+      analysisInstructions = `
+## ANÁLISE DE PERFORMANCE — DADOS REAIS DO CLIENTE
+${metricsAnalysisContext}
+
+## INSTRUÇÕES DE ANÁLISE
+Com base nos dados acima:
+1. Identifique os PADRÕES DE SUCESSO: quais temas, formatos, durações e abordagens geraram mais engajamento
+2. Identifique LACUNAS: temas que o público engajou mas foram pouco explorados
+3. Gere ${intent.quantity} temas NOVOS e ORIGINAIS inspirados nesses padrões
+4. Para cada tema, inclua:
+   - Título atrativo e estratégico
+   - Descrição com 3-5 tópicos/pontos que devem ser abordados no conteúdo
+   - Por que esse tema tem potencial (baseado nos dados)
+NÃO repita temas que já existem. Crie variações e evoluções dos melhores.`;
+    }
     
     const prompt = `Você é um estrategista de conteúdo para ${client.name}.
 ${client.identity_guide ? `\nGuia de Identidade:\n${client.identity_guide.substring(0, 1500)}` : ""}
 ${urlContext ? `\n## Conteúdo de Referência:\n${urlContext}` : ""}
+${analysisInstructions}
 ${userConstraints}
 
 TAREFA: Gere ${intent.quantity} conteúdo(s) COMPLETO(S) para ${intent.platform || "redes sociais"}.
 ${intent.topic ? `Tema: ${intent.topic}` : ""}
 ${platformInstructions[intent.platform || "instagram"] || ""}
 
-Responda APENAS com JSON: { "cards": [{ "title": "título curto", "description": "CONTEÚDO COMPLETO" }] }`;
+Responda APENAS com JSON: { "cards": [{ "title": "título curto", "description": "CONTEÚDO COMPLETO com tópicos detalhados" }] }`;
 
     try {
       const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -1113,15 +1267,22 @@ function buildPlanningSuccessMessage(cards: any[], intent: PlanningIntent): stri
   const count = cards.length;
   const platformLabel = intent.platform ? ` para **${intent.platform.charAt(0).toUpperCase() + intent.platform.slice(1)}**` : "";
   let message = `✅ **${count} ${count === 1 ? "card criado" : "cards criados"}${platformLabel}!**\n\n`;
+  if (intent.analyzeFirst) {
+    const sourceLabel = intent.analyzeSource === "youtube" ? "vídeos do YouTube" :
+                       intent.analyzeSource === "instagram" ? "posts do Instagram" :
+                       intent.analyzeSource === "linkedin" ? "posts do LinkedIn" :
+                       "conteúdos de todas as plataformas";
+    message += `📊 **Baseado na análise dos melhores ${sourceLabel}** do cliente\n\n`;
+  }
   if (intent.sourceUrl) message += `📎 Baseado em: ${intent.sourceUrl}\n\n`;
   message += "📋 **Cards adicionados ao planejamento:**\n\n";
-  for (let i = 0; i < Math.min(cards.length, 5); i++) {
+  for (let i = 0; i < Math.min(cards.length, 10); i++) {
     const card = cards[i];
     const dateStr = card.scheduled_at ? ` | 📅 ${formatDateBR(card.scheduled_at.split('T')[0])}` : "";
     const platformIcon = card.platform ? ` | ${getPlatformEmoji(card.platform)}` : "";
     message += `${i + 1}. **${card.title}**${platformIcon}${dateStr}\n`;
   }
-  if (cards.length > 5) message += `\n*...e mais ${cards.length - 5} cards*\n`;
+  if (cards.length > 10) message += `\n*...e mais ${cards.length - 10} cards*\n`;
   message += "\n---\n💡 Acesse **Planejamento** para editar ou reagendar\n";
   return message;
 }
@@ -1397,6 +1558,8 @@ serve(async (req) => {
       isComparison: comparisonQuery.isComparison,
       isContentCreation: contentCreation.isContentCreation,
       isPlanningRequest: planningIntent.isPlanning,
+      analyzeFirst: planningIntent.analyzeFirst,
+      analyzeSource: planningIntent.analyzeSource,
       needsPlanningRead,
       dateRange, metricFocus,
     });
@@ -1421,7 +1584,7 @@ serve(async (req) => {
 
     // 4. Handle Planning Card Creation
     if (planningIntent.isPlanning) {
-      if (planningIntent.missingInfo.length > 0 && !planningIntent.sourceUrl && !planningIntent.topic) {
+      if (planningIntent.missingInfo.length > 0 && !planningIntent.sourceUrl && !planningIntent.topic && !planningIntent.analyzeFirst) {
         const missingInfoPrompt = buildPlanningQuestionPrompt(planningIntent, client.name);
         const encoder = new TextEncoder();
         const stream = new ReadableStream({
