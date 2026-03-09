@@ -7,7 +7,6 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -36,9 +35,9 @@ serve(async (req) => {
 
     console.log(`Fetching YouTube metrics for channel: ${channelId}`);
 
-    // 1. Fetch channel statistics
+    // 1. Fetch channel statistics + contentDetails for uploads playlist
     const channelResponse = await fetch(
-      `https://www.googleapis.com/youtube/v3/channels?part=statistics,snippet&id=${channelId}&key=${YOUTUBE_API_KEY}`
+      `https://www.googleapis.com/youtube/v3/channels?part=statistics,snippet,contentDetails&id=${channelId}&key=${YOUTUBE_API_KEY}`
     );
     const channelData = await channelResponse.json();
     
@@ -54,41 +53,55 @@ serve(async (req) => {
 
     console.log(`Channel stats: ${JSON.stringify(channelStats)}`);
 
-    // 2. Fetch recent videos from uploads playlist
+    // 2. Get uploads playlist ID from contentDetails
     const uploadsPlaylistId = channel.contentDetails?.relatedPlaylists?.uploads || 
-      `UU${channelId.substring(2)}`; // Convert channel ID to uploads playlist ID
+      `UU${channelId.substring(2)}`;
 
-    // Get video list
-    const playlistResponse = await fetch(
-      `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet,contentDetails&playlistId=${uploadsPlaylistId}&maxResults=50&key=${YOUTUBE_API_KEY}`
-    );
-    const playlistData = await playlistResponse.json();
+    console.log(`Uploads playlist ID: ${uploadsPlaylistId}`);
 
-    if (!playlistData.items) {
-      console.log('No videos found in playlist');
+    // Get video list (paginate to get more videos)
+    let allVideoIds: string[] = [];
+    let nextPageToken: string | undefined;
+    
+    do {
+      const pageParam = nextPageToken ? `&pageToken=${nextPageToken}` : '';
+      const playlistResponse = await fetch(
+        `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet,contentDetails&playlistId=${uploadsPlaylistId}&maxResults=50&key=${YOUTUBE_API_KEY}${pageParam}`
+      );
+      const playlistData = await playlistResponse.json();
+
+      if (!playlistData.items) break;
+      
+      allVideoIds.push(...playlistData.items.map((item: any) => item.contentDetails.videoId));
+      nextPageToken = playlistData.nextPageToken;
+    } while (nextPageToken && allVideoIds.length < 200);
+
+    if (allVideoIds.length === 0) {
       return new Response(
-        JSON.stringify({ 
-          message: 'Channel metrics updated, no videos found',
-          channelStats 
-        }),
+        JSON.stringify({ message: 'Channel metrics updated, no videos found', channelStats }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Get video IDs
-    const videoIds = playlistData.items.map((item: any) => item.contentDetails.videoId);
+    console.log(`Found ${allVideoIds.length} video IDs`);
 
-    // 3. Fetch detailed video statistics
-    const videosResponse = await fetch(
-      `https://www.googleapis.com/youtube/v3/videos?part=statistics,snippet,contentDetails&id=${videoIds.join(',')}&key=${YOUTUBE_API_KEY}`
-    );
-    const videosData = await videosResponse.json();
+    // 3. Fetch detailed video statistics in batches of 50
+    const allVideos: any[] = [];
+    for (let i = 0; i < allVideoIds.length; i += 50) {
+      const batch = allVideoIds.slice(i, i + 50);
+      const videosResponse = await fetch(
+        `https://www.googleapis.com/youtube/v3/videos?part=statistics,snippet,contentDetails&id=${batch.join(',')}&key=${YOUTUBE_API_KEY}`
+      );
+      const videosData = await videosResponse.json();
+      if (videosData.items) {
+        allVideos.push(...videosData.items);
+      }
+    }
 
-    console.log(`Fetched ${videosData.items?.length || 0} videos`);
+    console.log(`Fetched ${allVideos.length} videos with details`);
 
     // 4. Process and store video data
-    const videos = videosData.items?.map((video: any) => {
-      // Parse duration from ISO 8601 format (PT1H2M3S)
+    const videos = allVideos.map((video: any) => {
       const duration = video.contentDetails.duration;
       const match = duration.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
       const hours = parseInt(match?.[1] || '0');
@@ -103,18 +116,18 @@ serve(async (req) => {
         published_at: video.snippet.publishedAt,
         duration_seconds: durationSeconds,
         total_views: parseInt(video.statistics.viewCount || '0'),
-        watch_hours: 0, // Not available via public API
-        subscribers_gained: 0, // Not available via public API
-        impressions: 0, // Not available via public API
-        click_rate: 0, // Not available via public API
+        likes: parseInt(video.statistics.likeCount || '0'),
+        comments: parseInt(video.statistics.commentCount || '0'),
+        watch_hours: 0,
+        subscribers_gained: 0,
+        impressions: 0,
+        click_rate: 0,
         thumbnail_url: video.snippet.thumbnails?.high?.url || video.snippet.thumbnails?.default?.url,
         metadata: {
-          likes: parseInt(video.statistics.likeCount || '0'),
-          comments: parseInt(video.statistics.commentCount || '0'),
           description: video.snippet.description?.substring(0, 500),
         }
       };
-    }) || [];
+    });
 
     // Upsert videos
     if (videos.length > 0) {

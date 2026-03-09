@@ -23,6 +23,8 @@ interface YouTubeVideo {
   subscribers_gained: number | null;
   impressions: number | null;
   click_rate: number | null;
+  likes: number | null;
+  comments: number | null;
   thumbnail_url: string | null;
   duration_seconds: number | null;
   transcript?: string | null;
@@ -36,7 +38,7 @@ interface YouTubeVideosTableProps {
   isLoading?: boolean;
 }
 
-type SortField = "published_at" | "total_views" | "watch_hours" | "subscribers_gained" | "click_rate";
+type SortField = "published_at" | "total_views" | "watch_hours" | "subscribers_gained" | "click_rate" | "likes" | "comments";
 type SortOrder = "asc" | "desc";
 
 const getPerformanceBadge = (views: number | null) => {
@@ -245,8 +247,13 @@ export function YouTubeVideosTable({ videos, clientId, isLoading }: YouTubeVideo
                 </Button>
               </TableHead>
               <TableHead className="w-[80px]">
-                <Button variant="ghost" size="sm" className="h-8 px-2" onClick={() => handleSort("watch_hours")}>
-                  Watch H. <ArrowUpDown className="ml-1 h-3 w-3" />
+                <Button variant="ghost" size="sm" className="h-8 px-2" onClick={() => handleSort("likes")}>
+                  Likes <ArrowUpDown className="ml-1 h-3 w-3" />
+                </Button>
+              </TableHead>
+              <TableHead className="w-[80px]">
+                <Button variant="ghost" size="sm" className="h-8 px-2" onClick={() => handleSort("comments")}>
+                  Coment. <ArrowUpDown className="ml-1 h-3 w-3" />
                 </Button>
               </TableHead>
               <TableHead className="w-[70px]">
@@ -311,7 +318,10 @@ export function YouTubeVideosTable({ videos, clientId, isLoading }: YouTubeVideo
                   {video.total_views?.toLocaleString() || 0}
                 </TableCell>
                 <TableCell className="text-muted-foreground">
-                  {video.watch_hours?.toLocaleString() || 0}
+                  {(video.likes || 0).toLocaleString()}
+                </TableCell>
+                <TableCell className="text-muted-foreground">
+                  {(video.comments || 0).toLocaleString()}
                 </TableCell>
                 <TableCell className="font-medium">
                   {video.click_rate?.toFixed(1) || 0}%

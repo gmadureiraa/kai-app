@@ -16,8 +16,12 @@ import { ImportHistoryPanel } from "./ImportHistoryPanel";
 import { DataCompletenessWarning } from "./DataCompletenessWarning";
 import { MetricMiniCard } from "./MetricMiniCard";
 import { PerformanceReportGenerator } from "./PerformanceReportGenerator";
+import { useFetchYouTubeMetrics } from "@/hooks/useYouTubeMetrics";
 import { subDays, format, parseISO, isAfter, startOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { Input } from "@/components/ui/input";
+import { toast } from "sonner";
+import { Loader2, RefreshCw } from "lucide-react";
 
 interface YouTubeVideo {
   id: string;
@@ -58,7 +62,29 @@ export function YouTubeDashboard({ clientId, videos, isLoading }: YouTubeDashboa
   const [selectedMetric, setSelectedMetric] = useState("views");
   const [showReportGenerator, setShowReportGenerator] = useState(false);
   const [showRssImporter, setShowRssImporter] = useState(false);
+  const [showApiFetch, setShowApiFetch] = useState(false);
+  const [channelIdInput, setChannelIdInput] = useState("");
   const { canImportData, canGenerateReports } = useWorkspace();
+  const fetchMetrics = useFetchYouTubeMetrics();
+
+  const handleApiFetch = () => {
+    if (!channelIdInput.trim()) {
+      toast.error("Insira o Channel ID do YouTube");
+      return;
+    }
+    fetchMetrics.mutate(
+      { clientId, channelId: channelIdInput.trim() },
+      {
+        onSuccess: (data) => {
+          toast.success(`${data.videosUpdated} vídeos atualizados via API!`);
+          setShowApiFetch(false);
+        },
+        onError: (err) => {
+          toast.error(`Erro ao buscar métricas: ${err.message}`);
+        },
+      }
+    );
+  };
 
   const cutoffDate = useMemo(() => {
     if (period === "all") return null;
@@ -262,6 +288,14 @@ export function YouTubeDashboard({ clientId, videos, isLoading }: YouTubeDashboa
               <Button 
                 variant="outline" 
                 className="border-border/50"
+                onClick={() => setShowApiFetch(!showApiFetch)}
+              >
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Buscar via API
+              </Button>
+              <Button 
+                variant="outline" 
+                className="border-border/50"
                 onClick={() => setShowRssImporter(true)}
               >
                 <Rss className="h-4 w-4 mr-2" />
@@ -291,6 +325,36 @@ export function YouTubeDashboard({ clientId, videos, isLoading }: YouTubeDashboa
         open={showReportGenerator}
         onOpenChange={setShowReportGenerator}
       />
+
+      {/* API Fetch Panel */}
+      {showApiFetch && canImportData && (
+        <Card className="p-4">
+          <div className="flex items-center gap-3">
+            <div className="h-9 w-9 rounded-lg bg-red-500/10 flex items-center justify-center shrink-0">
+              <Youtube className="h-4 w-4 text-red-500" />
+            </div>
+            <div className="flex-1">
+              <p className="text-sm font-medium mb-1">Buscar métricas via YouTube Data API</p>
+              <p className="text-xs text-muted-foreground">Insira o Channel ID (ex: UCxxxxxx) para buscar views, likes e comentários</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 mt-3">
+            <Input
+              placeholder="Channel ID (ex: UCxxxxxx)"
+              value={channelIdInput}
+              onChange={(e) => setChannelIdInput(e.target.value)}
+              className="flex-1"
+            />
+            <Button onClick={handleApiFetch} disabled={fetchMetrics.isPending}>
+              {fetchMetrics.isPending ? (
+                <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Buscando...</>
+              ) : (
+                <><RefreshCw className="h-4 w-4 mr-2" />Buscar</>
+              )}
+            </Button>
+          </div>
+        </Card>
+      )}
 
       {/* CSV Upload */}
       {canImportData && (

@@ -3689,12 +3689,14 @@ export type Database = {
         Row: {
           click_rate: number | null
           client_id: string
+          comments: number | null
           content_library_id: string | null
           content_synced_at: string | null
           created_at: string | null
           duration_seconds: number | null
           id: string
           impressions: number | null
+          likes: number | null
           metadata: Json | null
           published_at: string | null
           subscribers_gained: number | null
@@ -3709,12 +3711,14 @@ export type Database = {
         Insert: {
           click_rate?: number | null
           client_id: string
+          comments?: number | null
           content_library_id?: string | null
           content_synced_at?: string | null
           created_at?: string | null
           duration_seconds?: number | null
           id?: string
           impressions?: number | null
+          likes?: number | null
           metadata?: Json | null
           published_at?: string | null
           subscribers_gained?: number | null
@@ -3729,12 +3733,14 @@ export type Database = {
         Update: {
           click_rate?: number | null
           client_id?: string
+          comments?: number | null
           content_library_id?: string | null
           content_synced_at?: string | null
           created_at?: string | null
           duration_seconds?: number | null
           id?: string
           impressions?: number | null
+          likes?: number | null
           metadata?: Json | null
           published_at?: string | null
           subscribers_gained?: number | null
