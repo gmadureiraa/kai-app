@@ -156,6 +156,24 @@ export function AutomationDialog({ open, onOpenChange, automation }: AutomationD
   // Visual references for the selected client
   const [visualReferences, setVisualReferences] = useState<Array<{ id: string; image_url: string; description: string | null; reference_type: string }>>([]);
 
+  // Fetch visual references when client changes
+  useEffect(() => {
+    if (!clientId) {
+      setVisualReferences([]);
+      return;
+    }
+    const fetchRefs = async () => {
+      const { data } = await supabase
+        .from('client_visual_references')
+        .select('id, image_url, description, reference_type')
+        .eq('client_id', clientId)
+        .order('is_primary', { ascending: false })
+        .limit(20);
+      setVisualReferences(data || []);
+    };
+    fetchRefs();
+  }, [clientId]);
+
   // Auto-derive platform from content type
   useEffect(() => {
     const derivedPlatform = CONTENT_TO_PLATFORM[contentType as keyof typeof CONTENT_TO_PLATFORM];
