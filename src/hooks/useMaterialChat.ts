@@ -53,7 +53,7 @@ export function useMaterialChat({ clientId, materialContext, materialTitle }: Us
       }
 
       const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat-about-material`,
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/kai-simple-chat`,
         {
           method: 'POST',
           headers: {
