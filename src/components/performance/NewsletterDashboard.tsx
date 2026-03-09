@@ -450,6 +450,17 @@ export function NewsletterDashboard({ clientId, metrics, isLoading }: Newsletter
         clientId={clientId}
         platform="newsletter"
       />
+
+      {/* Report Generator Modal */}
+      <PerformanceReportGenerator
+        clientId={clientId}
+        platform="Newsletter"
+        period={periodOptions.find(o => o.value === period)?.label || period}
+        kpis={kpis}
+        metrics={filteredMetrics as any[]}
+        open={showReportGenerator}
+        onOpenChange={setShowReportGenerator}
+      />
     </div>
   );
 }
