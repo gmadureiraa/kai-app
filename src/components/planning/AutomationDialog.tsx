@@ -196,6 +196,7 @@ export function AutomationDialog({ open, onOpenChange, automation }: AutomationD
       setAutoGenerateImage(automation.auto_generate_image || false);
       setImagePromptTemplate(automation.image_prompt_template || '');
       setImageStyle((automation.image_style as ImageStyle) || 'photographic');
+      setImageReferenceIds(automation.image_reference_ids || []);
 
       if (automation.trigger_type === 'schedule') {
         const config = automation.trigger_config as ScheduleConfig;
