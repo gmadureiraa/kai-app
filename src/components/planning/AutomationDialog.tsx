@@ -324,6 +324,7 @@ export function AutomationDialog({ open, onOpenChange, automation }: AutomationD
       client_id: clientId || null,
       target_column_id: columnId || null,
       platform: platform || null,
+      platforms: selectedPlatforms.length > 0 ? selectedPlatforms : null,
       content_type: contentType,
       auto_generate_content: autoGenerate,
       prompt_template: autoGenerate ? promptTemplate : null,
