@@ -161,8 +161,7 @@ serve(async (req) => {
         }),
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
-
-    console.log(`Extracted ${uniqueImages.length} images from Instagram post`);
+    }
 
     // If uploadToStorage is requested, download and re-upload images to Supabase Storage
     let uploadedPaths: string[] = [];
