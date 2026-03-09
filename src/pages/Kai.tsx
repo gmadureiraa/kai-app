@@ -33,8 +33,6 @@ export default function Kai() {
   
   const { clients, isLoading: isLoadingClients } = useClients();
   const { canManageTeam, canViewPerformance, canViewClients, canViewHome, canViewRepurpose, isViewer } = useWorkspace();
-  const { isEnterprise, canAccessLibrary, canAccessPerformance, canAccessProfiles, isCanvas, canAccessKaiChat } = usePlanFeatures();
-  const { showUpgradePrompt } = useUpgradePrompt();
   const selectedClient = clients?.find(c => c.id === clientId);
   
   const [pendingMessage, setPendingMessage] = useState<string | null>(null);
