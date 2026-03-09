@@ -247,8 +247,13 @@ export function YouTubeVideosTable({ videos, clientId, isLoading }: YouTubeVideo
                 </Button>
               </TableHead>
               <TableHead className="w-[80px]">
-                <Button variant="ghost" size="sm" className="h-8 px-2" onClick={() => handleSort("watch_hours")}>
-                  Watch H. <ArrowUpDown className="ml-1 h-3 w-3" />
+                <Button variant="ghost" size="sm" className="h-8 px-2" onClick={() => handleSort("likes")}>
+                  Likes <ArrowUpDown className="ml-1 h-3 w-3" />
+                </Button>
+              </TableHead>
+              <TableHead className="w-[80px]">
+                <Button variant="ghost" size="sm" className="h-8 px-2" onClick={() => handleSort("comments")}>
+                  Coment. <ArrowUpDown className="ml-1 h-3 w-3" />
                 </Button>
               </TableHead>
               <TableHead className="w-[70px]">
