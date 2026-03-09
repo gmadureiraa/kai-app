@@ -11,8 +11,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { OutputNodeData, ContentFormat, Platform, ContentVersion, NodeComment as NodeCommentType, ApprovalStatus } from "../hooks/useCanvasState";
 import { useToast } from "@/hooks/use-toast";
-import { usePlanFeatures } from "@/hooks/usePlanFeatures";
-import { useUpgradePrompt } from "@/hooks/useUpgradePrompt";
 import { VersionHistory } from "../components/VersionHistory";
 import { ApprovalStatus as ApprovalStatusComponent } from "../components/ApprovalStatus";
 import { NodeComment } from "../components/NodeComment";
