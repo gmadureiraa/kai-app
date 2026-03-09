@@ -1,76 +1,56 @@
 
 
-# Plano: Regras de Criação como Fonte Única + Exemplos + Remover VISUAL RECOMENDADO
+## Diagnóstico: Por que as automações não estão postando
 
-## Problema Atual
+### Problema 1: LinkedIn - Itens criados mas nunca publicados
+As 3 automações de LinkedIn (Artigo de Opinião, Building in Public, Case & Prova Social) estão **funcionando corretamente** na geração de conteúdo e imagens. O problema é que todas estão com `auto_publish: false`. Os itens são criados com status "idea" no planejamento e ficam lá esperando publicação manual. Nenhum deles jamais é publicado automaticamente.
 
-Existem **3 cópias** desincronizadas das regras de formato:
-1. `supabase/functions/_shared/format-rules.ts` — o que a IA realmente usa
-2. `docs/formatos/CARROSSEL.md` — arquivo markdown separado
-3. `src/pages/Documentation.tsx` — dados hardcoded na UI (array `formatRules`)
+### Problema 2: Threads - Nenhuma automação configurada
+As credenciais do Threads (conta `madureira0x`) estão válidas, mas **não existe nenhuma automação** direcionada ao Threads.
 
-Alterar na documentação **não** altera o comportamento da IA. Além disso, o carrossel ainda menciona "VISUAL RECOMENDADO" em múltiplos lugares.
+### Problema 3: Bug no retry de imagem
+No `process-automations`, linha ~1322, o retry de geração de imagem referencia a variável `resolvedImagePrompt` que **não existe** no escopo (o nome correto é `fullImagePrompt`). Isso faz o retry falhar silenciosamente.
 
----
-
-## Implementação
-
-### 1. Remover "VISUAL RECOMENDADO" de todos os lugares
-
-**Arquivos afetados:**
-- `supabase/functions/_shared/format-rules.ts` — remover qualquer menção a VISUAL RECOMENDADO no template do carousel
-- `docs/formatos/CARROSSEL.md` — limpar formato de entrega e exemplos (apenas "Página X:" + texto)
-- `src/pages/Documentation.tsx` — atualizar `deliveryFormat` do carrossel
-
-O formato de entrega do carrossel passa a ser:
-```
-Página 1:
-[Headline impactante - máx 8 palavras]
-[Subtítulo se necessário]
+### Problema 4: Qualidade do conteúdo LinkedIn repetitivo
+Os posts gerados para LinkedIn estão todos girando em torno do mesmo tema ("clareza vs complexidade em Web3"). Falta diversidade temática e o sistema de variação (que existe para tweets) não está implementado para LinkedIn.
 
 ---
 
-Página 2:
-[Título do ponto]
-[Texto - máx 30 palavras]
+## Plano de Implementação
+
+### 1. Corrigir bug do retry de imagem no process-automations
+- Substituir `resolvedImagePrompt` por `fullImagePrompt` na linha do retry
+
+### 2. Criar sistema de variação para LinkedIn (anti-repetição)
+Adicionar categorias editoriais para LinkedIn similares ao `GM_VARIATION_CATEGORIES` dos tweets:
+- **Artigo de Opinião**: Análise contrarian de tendência, dados concretos, framework próprio
+- **Building in Public**: Bastidores reais, números, aprendizados honestos, erros
+- **Case & Prova Social**: Resultados de clientes, métricas antes/depois, processo
+
+Cada automação LinkedIn receberá um `variation_index` rotativo com sub-temas específicos para evitar repetição.
+
+### 3. Melhorar prompts LinkedIn com estratégia de conteúdo
+Enriquecer os prompts usando o guia de conteúdo do Madureira (`public/clients/madureira/guia-conteudo.md`):
+- Incorporar os 5 pilares de conteúdo como rotação temática
+- Usar tom de voz definido: técnico mas didático, direto, visionário
+- Adicionar instruções de formatação específicas para LinkedIn (quebras de linha, storytelling, CTA)
+
+### 4. Habilitar auto_publish para LinkedIn (com revisão inteligente)
+Alterar as 3 automações de LinkedIn para `auto_publish: true` para que os posts sejam publicados automaticamente após geração.
+
+### 5. Criar automações para Threads
+Criar 2-3 automações de Threads para o perfil Madureira:
+- **Threads Diário** (daily): Repurpose do melhor tweet do dia ou insight rápido
+- **Threads Semanal** (weekly): Versão expandida de um tweet de alta performance
+
+### 6. Melhorar geração de imagem para LinkedIn
+- Ajustar o aspect ratio para LinkedIn: `1.91:1` (landscape) em vez de `1:1`
+- Enriquecer prompts de imagem com contexto profissional/corporativo
+- Usar modelo `google/gemini-3-pro-image-preview` para maior qualidade nas imagens de LinkedIn
 
 ---
-[...]
 
-LEGENDA:
-[Texto da legenda]
-```
-
-### 2. Fonte Única de Verdade: format-rules.ts → Documentation.tsx
-
-Em vez de manter dados hardcoded duplicados na UI, criar um arquivo compartilhado `src/lib/formatRulesData.ts` que exporta o array `formatRules` (com structure, goldenRules, deliveryFormat, commonMistakes, **examples**). Este arquivo será:
-- Importado por `Documentation.tsx` para exibir na UI
-- A referência canônica que deve espelhar exatamente o `FORMAT_RULES` em `format-rules.ts`
-
-Adicionar um aviso claro no topo de ambos os arquivos: "Ao alterar regras aqui, atualize também o arquivo espelho."
-
-### 3. Adicionar 1-2 Exemplos por Formato
-
-Adicionar campo `examples` ao tipo de dados de cada formato em `src/lib/formatRulesData.ts`. Cada exemplo é um conteúdo completo no formato de entrega, servindo como referência.
-
-Para o **carrossel**, usar os exemplos já existentes no `CARROSSEL.md` (o de produtividade e templates do guia), adaptados sem VISUAL RECOMENDADO.
-
-Para os demais formatos, criar exemplos concisos mas completos mostrando o formato correto.
-
-Na UI (`FormatRuleCard`), renderizar os exemplos numa seção "📌 Exemplos de Referência" com `<pre>` formatado.
-
-### 4. Atualizar CARROSSEL.md e demais docs de formato
-
-Sincronizar `docs/formatos/CARROSSEL.md` para refletir as mesmas regras sem VISUAL RECOMENDADO.
-
----
-
-## Arquivos a Criar/Modificar
-
-| Arquivo | Ação |
-|---------|------|
-| `src/lib/formatRulesData.ts` | **Criar** — fonte única para UI com structure, rules, examples |
-| `src/pages/Documentation.tsx` | **Modificar** — importar de `formatRulesData.ts` em vez de dados hardcoded |
-| `supabase/functions/_shared/format-rules.ts` | **Modificar** — remover VISUAL RECOMENDADO do carousel, adicionar aviso de sync |
-| `docs/formatos/CARROSSEL.md` | **Modificar** — remover VISUAL RECOMENDADO, atualizar exemplos |
+### Arquivos a modificar
+1. `supabase/functions/process-automations/index.ts` - Fix retry bug, adicionar variação LinkedIn, melhorar prompts
+2. Database: Atualizar `planning_automations` para habilitar auto_publish nas automações LinkedIn e criar novas automações Threads
 
