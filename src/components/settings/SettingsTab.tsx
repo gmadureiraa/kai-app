@@ -20,6 +20,7 @@ import { useToast } from "@/hooks/use-toast";
 import { SettingsNavigation, SettingsSection } from "@/components/settings/SettingsNavigation";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
+import Documentation from "@/pages/Documentation";
 
 
 export function SettingsTab() {
