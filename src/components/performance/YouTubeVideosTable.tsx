@@ -38,7 +38,7 @@ interface YouTubeVideosTableProps {
   isLoading?: boolean;
 }
 
-type SortField = "published_at" | "total_views" | "watch_hours" | "subscribers_gained" | "click_rate" | "likes" | "comments";
+type SortField = "published_at" | "total_views" | "watch_hours" | "subscribers_gained" | "likes" | "comments";
 type SortOrder = "asc" | "desc";
 
 const getPerformanceBadge = (views: number | null) => {
