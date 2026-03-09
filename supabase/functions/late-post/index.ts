@@ -197,6 +197,25 @@ serve(async (req: Request) => {
       });
     }
 
+    // === THREADS PLATFORM: 500 char limit enforcement ===
+    const THREADS_MAX_CHARS = 500;
+    let finalContent = content;
+    
+    if (platform === 'threads' && finalContent && finalContent.length > THREADS_MAX_CHARS) {
+      console.warn(`[late-post] Threads content too long (${finalContent.length} chars), truncating to ${THREADS_MAX_CHARS}`);
+      finalContent = finalContent.substring(0, THREADS_MAX_CHARS - 3) + '...';
+    }
+    
+    // Truncate thread items for Threads platform
+    if (platform === 'threads' && threadItems) {
+      for (const item of threadItems) {
+        if (item.text && item.text.length > THREADS_MAX_CHARS) {
+          console.warn(`[late-post] Threads thread item too long (${item.text.length} chars), truncating`);
+          item.text = item.text.substring(0, THREADS_MAX_CHARS - 3) + '...';
+        }
+      }
+    }
+
     const LATE_API_KEY = Deno.env.get("LATE_API_KEY");
     if (!LATE_API_KEY) {
       return new Response(JSON.stringify({ error: "LATE_API_KEY não configurada" }), {
