@@ -60,6 +60,7 @@ export interface CreateAutomationInput {
   trigger_config: TriggerConfig;
   target_column_id?: string | null;
   platform?: string | null;
+  platforms?: string[] | null;
   content_type?: string;
   auto_generate_content?: boolean;
   prompt_template?: string | null;
