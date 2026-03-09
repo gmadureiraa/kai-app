@@ -172,8 +172,25 @@ export const PlanningItemCard = memo(function PlanningItemCard({
         {/* Row 3: Footer metadata */}
         <div className="flex items-center justify-between mt-2.5 ml-3.5">
           <div className="flex items-center gap-2 text-muted-foreground">
-            {/* Platform icon */}
-            <PlatformIcon className="h-3 w-3" />
+            {/* Platform icons - show all target platforms */}
+            <div className="flex items-center gap-0.5">
+              {targetPlatforms.slice(0, 3).map((tp) => {
+                const Icon = platformIcons[tp] || FileText;
+                const color = PLATFORM_COLOR_MAP[tp];
+                return (
+                  <Icon
+                    key={tp}
+                    className="h-3 w-3"
+                    style={color ? { color } : undefined}
+                  />
+                );
+              })}
+              {targetPlatforms.length > 3 && (
+                <span className="text-[9px] text-muted-foreground font-medium">
+                  +{targetPlatforms.length - 3}
+                </span>
+              )}
+            </div>
             
             {/* Date */}
             {displayDate && (
