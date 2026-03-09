@@ -17,6 +17,7 @@ import {
   Lock,
   MessageSquare,
   MessageCircle,
+  LineChart,
 } from "lucide-react";
 import { useDevAccess } from "@/hooks/useDevAccess";
 import { cn } from "@/lib/utils";
@@ -302,6 +303,15 @@ export function KaiSidebar({
           label="Planejamento"
           active={activeTab === "planning"}
           onClick={() => onTabChange("planning")}
+          collapsed={collapsed}
+        />
+
+        {/* Analytics (Beta) */}
+        <NavItem
+          icon={<LineChart className="h-4 w-4" strokeWidth={1.5} />}
+          label="Analytics ✨"
+          active={activeTab === "analytics"}
+          onClick={() => onTabChange("analytics")}
           collapsed={collapsed}
         />
 
