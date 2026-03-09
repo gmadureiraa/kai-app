@@ -38,7 +38,9 @@ import {
 import { useClients } from '@/hooks/useClients';
 import { usePlanningItems } from '@/hooks/usePlanningItems';
 import { supabase } from '@/integrations/supabase/client';
-import { CONTENT_TYPE_OPTIONS, CONTENT_TO_PLATFORM } from '@/types/contentTypes';
+import { CONTENT_TYPE_OPTIONS, CONTENT_TO_PLATFORM, ALL_PUBLISH_PLATFORMS } from '@/types/contentTypes';
+import { useClientPlatformStatus } from '@/hooks/useClientPlatformStatus';
+import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
 interface AutomationDialogProps {
