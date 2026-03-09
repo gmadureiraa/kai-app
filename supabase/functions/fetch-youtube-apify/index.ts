@@ -54,7 +54,7 @@ serve(async (req) => {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         startUrls: [{ url: normalizedUrl }],
-        maxResults: singleVideo ? 1 : 200,
+        maxResults: singleVideo ? 1 : (customMaxResults || 200),
         maxResultsShorts: 0,
         maxResultStreams: 0,
       }),
