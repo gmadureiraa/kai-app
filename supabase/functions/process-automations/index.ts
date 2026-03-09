@@ -993,6 +993,17 @@ serve(async (req) => {
                 maxTopPerformers: 3,
               });
               console.log(`Enriched context loaded: ${enrichedContext.length} chars`);
+              
+              // Inject Voice Profile directly into enrichedContext for double reinforcement
+              try {
+                const voiceSection = await getStructuredVoice(automation.client_id!);
+                if (voiceSection) {
+                  enrichedContext = `${voiceSection}\n\n---\n\n${enrichedContext}`;
+                  console.log(`Voice Profile injected: ${voiceSection.length} chars`);
+                }
+              } catch (vpError) {
+                console.warn(`Could not load voice profile:`, vpError);
+              }
             } catch (ctxError) {
               console.warn(`Could not load enriched context:`, ctxError);
             }
