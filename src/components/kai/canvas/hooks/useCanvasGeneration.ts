@@ -2,7 +2,7 @@ import { useCallback } from "react";
 import { Node, Edge } from "reactflow";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { useTokenError } from "@/hooks/useTokenError";
+
 import { IMAGE_FORMAT_INSTRUCTIONS } from "@/types/template";
 import { callKaiContentAgent } from "@/lib/parseOpenAIStream";
 import { parseStructuredContent } from "@/lib/contentGeneration";
