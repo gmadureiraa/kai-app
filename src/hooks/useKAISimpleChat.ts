@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { streamSSEToCallback } from "@/lib/parseOpenAIStream";
 import { toast } from "sonner";
 
 export interface SimpleMessage {
