@@ -92,7 +92,7 @@ serve(async (req) => {
     // Log first item structure for debugging
     if (items.length > 0) {
       console.log(`[fetch-youtube-apify] Sample item keys:`, Object.keys(items[0]));
-      console.log(`[fetch-youtube-apify] Sample item type:`, items[0].type, `id:`, items[0].id, `url:`, items[0].url, `title:`, items[0].title);
+      console.log(`[fetch-youtube-apify] Full first item:`, JSON.stringify(items[0]).substring(0, 2000));
     }
 
     // Filter only video items (not channel info) - be permissive
