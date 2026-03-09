@@ -50,7 +50,7 @@ interface DocSection {
 }
 
 // Helper to render a format card
-function FormatRuleCard({ format }: { format: typeof formatRules[number] }) {
+function FormatRuleCard({ format }: { format: FormatRuleData }) {
   return (
     <AccordionItem value={format.id} className="border rounded-lg px-4">
       <AccordionTrigger className="hover:no-underline py-3">
@@ -109,6 +109,20 @@ function FormatRuleCard({ format }: { format: typeof formatRules[number] }) {
             ))}
           </ul>
         </div>
+
+        {/* Examples */}
+        {format.examples && format.examples.length > 0 && (
+          <div>
+            <h4 className="text-sm font-semibold mb-2 text-primary">📌 Exemplos de Referência</h4>
+            <div className="space-y-3">
+              {format.examples.map((example, i) => (
+                <pre key={i} className="text-xs text-muted-foreground bg-muted/50 p-3 rounded-lg border overflow-x-auto whitespace-pre-wrap font-mono">
+                  {example}
+                </pre>
+              ))}
+            </div>
+          </div>
+        )}
       </AccordionContent>
     </AccordionItem>
   );
