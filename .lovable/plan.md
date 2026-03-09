@@ -1,41 +1,56 @@
 
 
-# Fix: Threads Posting Issues
+## Diagnóstico: Por que as automações não estão postando
 
-## Root Cause
+### Problema 1: LinkedIn - Itens criados mas nunca publicados
+As 3 automações de LinkedIn (Artigo de Opinião, Building in Public, Case & Prova Social) estão **funcionando corretamente** na geração de conteúdo e imagens. O problema é que todas estão com `auto_publish: false`. Os itens são criados com status "idea" no planejamento e ficam lá esperando publicação manual. Nenhum deles jamais é publicado automaticamente.
 
-After reviewing the Late API Threads documentation, the code has these issues:
+### Problema 2: Threads - Nenhuma automação configurada
+As credenciais do Threads (conta `madureira0x`) estão válidas, mas **não existe nenhuma automação** direcionada ao Threads.
 
-1. **500 character limit not enforced** - Threads has a strict 500 char limit (the #1 failure reason per Late docs at 14.5% failure rate). The code sends the exact same content to Twitter (280 chars) and Threads (500 chars) without validation. Long content from LinkedIn or automation-generated posts will fail silently at publish time even though Late API accepts the schedule (201).
+### Problema 3: Bug no retry de imagem
+No `process-automations`, linha ~1322, o retry de geração de imagem referencia a variável `resolvedImagePrompt` que **não existe** no escopo (o nome correto é `fullImagePrompt`). Isso faz o retry falhar silenciosamente.
 
-2. **Duplicate content detection** - When posting the same content to Twitter and Threads sequentially, sometimes Late's content hash duplicate detection triggers a 409 for the second platform because both posts have the same `content` field. The hash is per-account, but edge cases exist.
+### Problema 4: Qualidade do conteúdo LinkedIn repetitivo
+Os posts gerados para LinkedIn estão todos girando em torno do mesmo tema ("clareza vs complexidade em Web3"). Falta diversidade temática e o sistema de variação (que existe para tweets) não está implementado para LinkedIn.
 
-3. **No `customContent` per platform** - Late API supports `customContent` in `platformSpecificData` to provide platform-specific text when cross-posting. The code doesn't use this.
+---
 
-## Changes
+## Plano de Implementação
 
-### `supabase/functions/late-post/index.ts`
+### 1. Corrigir bug do retry de imagem no process-automations
+- Substituir `resolvedImagePrompt` por `fullImagePrompt` na linha do retry
 
-1. **Add Threads 500 char validation and auto-truncation**
-   - Before sending to Late API, if platform is `threads` and content exceeds 500 chars, truncate at 497 + "..."
-   - Log a warning when truncation happens
+### 2. Criar sistema de variação para LinkedIn (anti-repetição)
+Adicionar categorias editoriais para LinkedIn similares ao `GM_VARIATION_CATEGORIES` dos tweets:
+- **Artigo de Opinião**: Análise contrarian de tendência, dados concretos, framework próprio
+- **Building in Public**: Bastidores reais, números, aprendizados honestos, erros
+- **Case & Prova Social**: Resultados de clientes, métricas antes/depois, processo
 
-2. **Add Threads-specific `platformSpecificData`**
-   - For thread sequences on Threads platform, ensure each `threadItem.content` respects the 500 char limit per item
+Cada automação LinkedIn receberá um `variation_index` rotativo com sub-temas específicos para evitar repetição.
 
-3. **Improve error messaging for Threads-specific failures**
-   - Parse the common Threads errors (2207052 media download failure, 2207050 restricted account) and surface clear Portuguese messages
+### 3. Melhorar prompts LinkedIn com estratégia de conteúdo
+Enriquecer os prompts usando o guia de conteúdo do Madureira (`public/clients/madureira/guia-conteudo.md`):
+- Incorporar os 5 pilares de conteúdo como rotação temática
+- Usar tom de voz definido: técnico mas didático, direto, visionário
+- Adicionar instruções de formatação específicas para LinkedIn (quebras de linha, storytelling, CTA)
 
-### `src/components/planning/PlanningItemDialog.tsx`
+### 4. Habilitar auto_publish para LinkedIn (com revisão inteligente)
+Alterar as 3 automações de LinkedIn para `auto_publish: true` para que os posts sejam publicados automaticamente após geração.
 
-4. **Add content length warning for Threads**
-   - When Threads is selected as a target platform and content exceeds 500 chars, show an inline warning badge
-   - This is UX-only, the backend will auto-truncate as safety net
+### 5. Criar automações para Threads
+Criar 2-3 automações de Threads para o perfil Madureira:
+- **Threads Diário** (daily): Repurpose do melhor tweet do dia ou insight rápido
+- **Threads Semanal** (weekly): Versão expandida de um tweet de alta performance
 
-## Files Modified
+### 6. Melhorar geração de imagem para LinkedIn
+- Ajustar o aspect ratio para LinkedIn: `1.91:1` (landscape) em vez de `1:1`
+- Enriquecer prompts de imagem com contexto profissional/corporativo
+- Usar modelo `google/gemini-3-pro-image-preview` para maior qualidade nas imagens de LinkedIn
 
-| File | Change |
-|------|--------|
-| `supabase/functions/late-post/index.ts` | 500 char truncation for Threads, improved error parsing |
-| `src/components/planning/PlanningItemDialog.tsx` | Content length warning when Threads is selected |
+---
+
+### Arquivos a modificar
+1. `supabase/functions/process-automations/index.ts` - Fix retry bug, adicionar variação LinkedIn, melhorar prompts
+2. Database: Atualizar `planning_automations` para habilitar auto_publish nas automações LinkedIn e criar novas automações Threads
 

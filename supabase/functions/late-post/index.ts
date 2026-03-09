@@ -197,6 +197,25 @@ serve(async (req: Request) => {
       });
     }
 
+    // === THREADS PLATFORM: 500 char limit enforcement ===
+    const THREADS_MAX_CHARS = 500;
+    let finalContent = content;
+    
+    if (platform === 'threads' && finalContent && finalContent.length > THREADS_MAX_CHARS) {
+      console.warn(`[late-post] Threads content too long (${finalContent.length} chars), truncating to ${THREADS_MAX_CHARS}`);
+      finalContent = finalContent.substring(0, THREADS_MAX_CHARS - 3) + '...';
+    }
+    
+    // Truncate thread items for Threads platform
+    if (platform === 'threads' && threadItems) {
+      for (const item of threadItems) {
+        if (item.text && item.text.length > THREADS_MAX_CHARS) {
+          console.warn(`[late-post] Threads thread item too long (${item.text.length} chars), truncating`);
+          item.text = item.text.substring(0, THREADS_MAX_CHARS - 3) + '...';
+        }
+      }
+    }
+
     const LATE_API_KEY = Deno.env.get("LATE_API_KEY");
     if (!LATE_API_KEY) {
       return new Response(JSON.stringify({ error: "LATE_API_KEY não configurada" }), {
@@ -305,6 +324,9 @@ serve(async (req: Request) => {
 
     console.log("Media items with order:", finalMediaItems.map(m => ({ url: m.url.substring(0, 50), order: m.order })));
 
+    // Use finalContent (possibly truncated for Threads) instead of raw content
+    const postContent = platform === 'threads' ? (finalContent || content) : content;
+
     // Build post payload for Late API
     const postPayload: Record<string, unknown> = {
       publishNow: publishNow,
@@ -346,8 +368,8 @@ serve(async (req: Request) => {
       // Set content to first tweet for backwards compatibility, but Late uses threadItems
       postPayload.content = lateThreadItems[0]?.content || content;
     } else {
-      // Standard post (non-thread)
-      postPayload.content = content;
+      // Standard post (non-thread) - use postContent (truncated for Threads)
+      postPayload.content = postContent;
       
       // Build platform-specific data
       const platformSpecificData: Record<string, unknown> = {};
@@ -456,6 +478,13 @@ serve(async (req: Request) => {
         if (responseText.includes("rate limit")) {
           userMessage = "Limite de publicações atingido. Tente novamente mais tarde.";
         } else if (responseText.includes("unauthorized") || responseText.includes("401")) {
+          userMessage = "Credenciais expiradas. Reconecte a conta.";
+        } else if (responseText.includes("2207052")) {
+          userMessage = "Threads: erro ao processar mídia. Verifique se a imagem/vídeo é acessível.";
+        } else if (responseText.includes("2207050")) {
+          userMessage = "Threads: conta restrita. Verifique as permissões da conta.";
+        } else if (responseText.includes("character") || responseText.includes("too long")) {
+          userMessage = "Threads: conteúdo excede o limite de 500 caracteres.";
           userMessage = "Credenciais expiradas. Reconecte a conta.";
         }
       }
