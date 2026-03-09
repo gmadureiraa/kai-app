@@ -344,28 +344,28 @@ export function PlanningItemDialog({
       // If scheduling is set AND we can publish to this platform, send to Late API
       const shouldScheduleToLate = 
         finalScheduledAt && 
-        canPublishNow && 
-        platform && 
+        publishablePlatforms.length > 0 && 
         selectedClientId &&
         (finalContent.trim() || threadTweets.some(t => t.text.trim()));
 
       if (shouldScheduleToLate && savedItemId) {
         setIsSchedulingToLate(true);
         try {
-          await lateConnection.publishContent(
-            platform as LatePlatform,
-            isTwitterThread ? threadTweets.map(t => t.text).join('\n\n') : finalContent,
-            {
-              mediaUrls: mediaItems.map(m => m.url),
-              planningItemId: savedItemId,
-              threadItems: isTwitterThread ? threadTweets : undefined,
-              scheduledFor: finalScheduledAt.toISOString(),
-              publishNow: false,
-            }
-          );
-          toast.success(`Agendado para ${format(finalScheduledAt, "dd/MM 'às' HH:mm")}`);
+          for (const targetPlatform of publishablePlatforms) {
+            await lateConnection.publishContent(
+              targetPlatform as LatePlatform,
+              isTwitterThread ? threadTweets.map(t => t.text).join('\n\n') : finalContent,
+              {
+                mediaUrls: mediaItems.map(m => m.url),
+                planningItemId: savedItemId,
+                threadItems: isTwitterThread ? threadTweets : undefined,
+                scheduledFor: finalScheduledAt.toISOString(),
+                publishNow: false,
+              }
+            );
+          }
+          toast.success(`Agendado em ${publishablePlatforms.length} plataforma(s) para ${format(finalScheduledAt, "dd/MM 'às' HH:mm")}`);
         } catch (scheduleError) {
-          // If Late API scheduling fails, keep local scheduling (cron will handle it)
           console.warn('Late API scheduling failed, keeping local schedule:', scheduleError);
           toast.info("Salvo! Será publicado automaticamente no horário agendado.");
         } finally {
