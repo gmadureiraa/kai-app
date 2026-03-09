@@ -498,11 +498,6 @@ export function TwitterDashboard({ clientId, posts, isLoading }: TwitterDashboar
                     <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center text-sm font-bold text-primary">
                       {index + 1}
                     </div>
-                    {tweet.tweet_url && (
-                      <a href={tweet.tweet_url} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors">
-                        <ExternalLink className="h-4 w-4" />
-                      </a>
-                    )}
                   </div>
 
                   <p className="text-sm text-foreground line-clamp-3 min-h-[3.75rem]">
