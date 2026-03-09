@@ -126,7 +126,6 @@ export function AutomationDialog({ open, onOpenChange, automation }: AutomationD
   // Form state
   const [name, setName] = useState('');
   const [triggerType, setTriggerType] = useState<TriggerType>('schedule');
-  const [clientId, setClientId] = useState<string>('');
   const [columnId, setColumnId] = useState<string>('');
   const [platform, setPlatform] = useState<string>('');
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
