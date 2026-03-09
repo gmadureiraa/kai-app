@@ -3,8 +3,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useSocialCredentials } from "@/hooks/useSocialCredentials";
-import { usePlanFeatures } from "@/hooks/usePlanFeatures";
-import { EnterpriseLockScreen } from "@/components/shared/EnterpriseLockScreen";
 import { useLateConnection, LatePlatform } from "@/hooks/useLateConnection";
 import { useClientPlatformStatus } from "@/hooks/useClientPlatformStatus";
 import { useToast } from "@/components/ui/use-toast";
