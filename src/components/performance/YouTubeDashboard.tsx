@@ -423,8 +423,8 @@ export function YouTubeDashboard({ clientId, videos, isLoading }: YouTubeDashboa
         </Collapsible>
       )}
 
-      {/* Primary KPIs - 6 cards */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+      {/* Primary KPIs - 5 cards */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
         <StatCard
           icon={Eye}
           label="Visualizações"
