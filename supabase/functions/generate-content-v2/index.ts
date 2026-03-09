@@ -1,7 +1,9 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getFormatRules, UNIVERSAL_RULES } from "../_shared/format-rules.ts";
-import { getFormatDocs, getFormatChecklistFormatted, getGlobalKnowledge, getSuccessPatterns, getFullContentContext } from "../_shared/knowledge-loader.ts";
+import { getFormatDocs, getFormatChecklistFormatted, getGlobalKnowledge, getSuccessPatterns, getFullContentContext, getStructuredVoice } from "../_shared/knowledge-loader.ts";
+import { buildForbiddenPhrasesSection, UNIVERSAL_OUTPUT_RULES } from "../_shared/quality-rules.ts";
+import { selectModelForFormat } from "../_shared/prompt-builder.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
