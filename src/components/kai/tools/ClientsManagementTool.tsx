@@ -1,8 +1,6 @@
 import { useState } from "react";
 import { Plus, Search, Pencil, Trash2 } from "lucide-react";
 import { useClients, Client } from "@/hooks/useClients";
-import { usePlanLimits } from "@/hooks/usePlanLimits";
-import { useUpgradePrompt } from "@/hooks/useUpgradePrompt";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
