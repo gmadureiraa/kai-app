@@ -133,6 +133,7 @@ export function PlanningItemDialog({
   const [mediaItems, setMediaItems] = useState<MediaItem[]>([]);
   const [threadTweets, setThreadTweets] = useState<ThreadTweet[]>([]);
   const [assignedTo, setAssignedTo] = useState<string>('');
+  const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
   const [referenceInput, setReferenceInput] = useState('');
   const [recurrenceConfig, setRecurrenceConfig] = useState<RecurrenceConfigType>({
     type: 'none',
