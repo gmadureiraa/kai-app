@@ -26,7 +26,8 @@ import { ImageGenerationModal, ImageGenerationOptions } from './ImageGenerationM
 import { PlanningItemComments } from './PlanningItemComments';
 import { MentionableInput } from './MentionableInput';
 import { RecurrenceConfig } from './RecurrenceConfig';
-import { CONTENT_TYPE_OPTIONS, CONTENT_TO_PLATFORM, ContentTypeKey } from '@/types/contentTypes';
+import { CONTENT_TYPE_OPTIONS, CONTENT_TO_PLATFORM, ContentTypeKey, ALL_PUBLISH_PLATFORMS } from '@/types/contentTypes';
+import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
 import type { PlanningItem, CreatePlanningItemInput, PlanningPlatform, PlanningPriority, KanbanColumn } from '@/hooks/usePlanningItems';
 import type { RecurrenceConfig as RecurrenceConfigType } from '@/types/recurrence';
