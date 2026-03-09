@@ -368,6 +368,8 @@ export default function Settings() {
         return renderNotificationsSection();
       case "appearance":
         return renderAppearanceSection();
+      case "docs":
+        return <Documentation embedded />;
       default:
         return renderProfileSection();
     }

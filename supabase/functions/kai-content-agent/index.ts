@@ -473,7 +473,7 @@ Sua resposta deve conter SOMENTE o conteúdo pronto para publicação. Siga EXAT
 
     // Streaming request
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:streamGenerateContent?alt=sse&key=${GOOGLE_API_KEY}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:streamGenerateContent?alt=sse&key=${GOOGLE_API_KEY}`,
       {
         method: "POST",
         headers: {
@@ -482,8 +482,8 @@ Sua resposta deve conter SOMENTE o conteúdo pronto para publicação. Siga EXAT
         body: JSON.stringify({
           contents: mergedContents,
           generationConfig: {
-            temperature: 0.7,
-            maxOutputTokens: 4096,
+            temperature: modelTemperature,
+            maxOutputTokens: modelMaxTokens,
           },
         }),
       }
