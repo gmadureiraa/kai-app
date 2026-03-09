@@ -43,10 +43,14 @@ export function InstagramCSVUpload({ clientId }: InstagramCSVUploadProps) {
       const reader = new FileReader();
       reader.onload = (e) => {
         try {
-          const data = new Uint8Array(e.target?.result as ArrayBuffer);
-          const workbook = XLSX.read(data, { type: "array" });
+          // Read as text to handle BOM and encoding correctly
+          let text = e.target?.result as string;
+          // Strip BOM if present
+          if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
+          
+          const workbook = XLSX.read(text, { type: "string" });
           const sheet = workbook.Sheets[workbook.SheetNames[0]];
-          const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" }) as any[][];
+          const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "", raw: false }) as any[][];
 
           if (rows.length < 2) { resolve([]); return; }
 
