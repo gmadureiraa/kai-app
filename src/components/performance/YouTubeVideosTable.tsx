@@ -318,9 +318,6 @@ export function YouTubeVideosTable({ videos, clientId, isLoading }: YouTubeVideo
                 <TableCell className="text-muted-foreground">
                   {(video.comments || 0).toLocaleString()}
                 </TableCell>
-                <TableCell className="font-medium">
-                  {video.click_rate?.toFixed(1) || 0}%
-                </TableCell>
                 <TableCell>
                   {getPerformanceBadge(video.total_views)}
                 </TableCell>

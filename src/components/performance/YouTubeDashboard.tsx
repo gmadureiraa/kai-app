@@ -524,7 +524,7 @@ export function YouTubeDashboard({ clientId, videos, isLoading }: YouTubeDashboa
           <CardTitle className="text-base">Todos os Vídeos</CardTitle>
         </CardHeader>
         <CardContent>
-          <YouTubeVideosTable videos={videos as any} isLoading={isLoading} />
+          <YouTubeVideosTable videos={videos as any} clientId={clientId} isLoading={isLoading} />
         </CardContent>
       </Card>
 
