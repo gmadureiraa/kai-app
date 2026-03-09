@@ -419,19 +419,28 @@ Sua resposta deve conter SOMENTE o conteúdo pronto para publicação. Siga EXAT
       }
     }
 
+    // Select model based on format complexity
+    const COMPLEX_FORMATS = ['carousel', 'newsletter', 'blog_post', 'long_video', 'x_article', 'case_study'];
+    const isComplexFormat = format && COMPLEX_FORMATS.includes(format);
+    const modelName = isComplexFormat ? 'gemini-2.5-pro-preview-06-05' : 'gemini-2.0-flash';
+    const modelTemperature = isComplexFormat ? 0.8 : 0.7;
+    const modelMaxTokens = isComplexFormat ? 8192 : 4096;
+    
+    console.log(`[kai-content-agent] Using model: ${modelName} (format: ${format || 'generic'}, complex: ${isComplexFormat})`);
+
     // Non-streaming request
     if (!useStreaming) {
       console.log("[kai-content-agent] Non-streaming request");
       const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GOOGLE_API_KEY}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${GOOGLE_API_KEY}`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             contents: mergedContents,
             generationConfig: {
-              temperature: 0.7,
-              maxOutputTokens: 8192,
+              temperature: modelTemperature,
+              maxOutputTokens: modelMaxTokens,
             },
           }),
         }
