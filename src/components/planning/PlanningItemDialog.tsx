@@ -147,10 +147,25 @@ export function PlanningItemDialog({
   const { canAutoPublish, getPlatformStatus } = useClientPlatformStatus(selectedClientId);
   const lateConnection = useLateConnection({ clientId: selectedClientId });
 
-  // Derive platform from content type
+  // Derive platform from content type (used as default suggestion)
   const platform = CONTENT_TO_PLATFORM[contentType] as PlanningPlatform;
-  const platformStatus = getPlatformStatus(platform);
-  const canPublishNow = canAutoPublish(platform) && (content.trim() || threadTweets.some(t => t.text.trim()));
+  
+  // Auto-set default platform when content type changes
+  useEffect(() => {
+    if (platform && selectedPlatforms.length === 0) {
+      setSelectedPlatforms([platform]);
+    }
+  }, [contentType]);
+
+  const togglePlatform = (p: string) => {
+    setSelectedPlatforms(prev => 
+      prev.includes(p) ? prev.filter(x => x !== p) : [...prev, p]
+    );
+  };
+
+  // Check if any selected platform can auto-publish
+  const publishablePlatforms = selectedPlatforms.filter(p => canAutoPublish(p as any));
+  const canPublishNow = publishablePlatforms.length > 0 && (content.trim() || threadTweets.some(t => t.text.trim()));
 
   const canGenerateContent = title.trim() && contentType && selectedClientId;
   const canGenerateImage = (content.trim() || threadTweets.some(t => t.text.trim())) && selectedClientId;
