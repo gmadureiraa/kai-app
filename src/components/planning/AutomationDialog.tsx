@@ -708,22 +708,30 @@ export function AutomationDialog({ open, onOpenChange, automation }: AutomationD
             </div>
 
             <div className="space-y-2">
-              <Label>Plataforma</Label>
-              <Select value={platform || "none"} onValueChange={(v) => setPlatform(v === "none" ? "" : v)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Nenhuma</SelectItem>
-                  {PLATFORMS.map((p) => (
-                    <SelectItem key={p.value} value={p.value}>
+              <Label>Plataformas de publicação</Label>
+              <div className="flex flex-wrap gap-2">
+                {PLATFORMS.map((p) => (
+                  <div key={p.value} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`platform-${p.value}`}
+                      checked={selectedPlatforms.includes(p.value)}
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          setSelectedPlatforms(prev => [...prev, p.value]);
+                          if (!platform) setPlatform(p.value);
+                        } else {
+                          setSelectedPlatforms(prev => prev.filter(v => v !== p.value));
+                        }
+                      }}
+                    />
+                    <label htmlFor={`platform-${p.value}`} className="text-sm cursor-pointer">
                       {p.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                    </label>
+                  </div>
+                ))}
+              </div>
               <p className="text-xs text-muted-foreground">
-                Derivada automaticamente do tipo de conteúdo
+                Selecione uma ou mais plataformas para publicar o mesmo conteúdo
               </p>
             </div>
           </div>
