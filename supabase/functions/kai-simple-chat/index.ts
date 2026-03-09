@@ -884,6 +884,37 @@ async function fetchMetricsContext(
     });
   }
 
+  // YouTube videos
+  if (youtubeVideos.length > 0) {
+    const totalViews = youtubeVideos.reduce((sum: number, v: any) => sum + (v.total_views || 0), 0);
+    const avgViews = Math.round(totalViews / youtubeVideos.length);
+    const totalWatchHours = youtubeVideos.reduce((sum: number, v: any) => sum + (v.watch_hours || 0), 0);
+
+    context += `\n### YouTube (${youtubeVideos.length} vídeos)\n`;
+    context += `**Totais:** ${totalViews.toLocaleString('pt-BR')} views | ${totalWatchHours.toFixed(1)}h assistidas\n`;
+    context += `**Média:** ${avgViews.toLocaleString('pt-BR')} views/vídeo\n`;
+
+    if (isSpecificQuery) {
+      context += `\n**Ranking por Views:**\n`;
+      youtubeVideos.forEach((v: any, i: number) => {
+        const pubDate = v.published_at ? formatDateBR(v.published_at.split('T')[0]) : '';
+        context += `\n**#${i + 1} - ${(v.total_views || 0).toLocaleString('pt-BR')} views** (${pubDate})\n`;
+        context += `Título: ${v.title}\n`;
+        context += `Likes: ${(v.likes || 0).toLocaleString('pt-BR')} | Comments: ${v.comments || 0} | CTR: ${(v.click_rate || 0).toFixed(2)}%\n`;
+        if (v.duration_seconds) context += `Duração: ${Math.floor(v.duration_seconds / 60)}min\n`;
+        if (v.subscribers_gained) context += `Inscritos ganhos: +${v.subscribers_gained}\n`;
+        if (v.transcript && i < 3) context += `Transcrição: ${v.transcript.substring(0, 400)}\n`;
+      });
+    } else {
+      context += `\n**Top 5 por Views:**\n`;
+      youtubeVideos.slice(0, 5).forEach((v: any, i: number) => {
+        const pubDate = v.published_at ? formatDateBR(v.published_at.split('T')[0]) : '';
+        context += `${i + 1}. ${v.title}\n`;
+        context += `   🎬 ${(v.total_views || 0).toLocaleString('pt-BR')} views | ${(v.likes || 0).toLocaleString('pt-BR')} likes | ${pubDate}\n`;
+      });
+    }
+  }
+
   return context.substring(0, MAX_METRICS_CONTEXT_LENGTH);
 }
 
