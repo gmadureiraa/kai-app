@@ -66,8 +66,6 @@ function ContentOutputNodeComponent({
   onCreateRemix
 }: ContentOutputNodeProps) {
   const { toast } = useToast();
-  const { hasPlanning } = usePlanFeatures();
-  const { showUpgradePrompt } = useUpgradePrompt();
   const [isEditing, setIsEditing] = useState(false);
   const [editedContent, setEditedContent] = useState(data.content);
   const [isExpanded, setIsExpanded] = useState(false);
