@@ -326,6 +326,36 @@ export function YouTubeDashboard({ clientId, videos, isLoading }: YouTubeDashboa
         onOpenChange={setShowReportGenerator}
       />
 
+      {/* API Fetch Panel */}
+      {showApiFetch && canImportData && (
+        <Card className="p-4">
+          <div className="flex items-center gap-3">
+            <div className="h-9 w-9 rounded-lg bg-red-500/10 flex items-center justify-center shrink-0">
+              <Youtube className="h-4 w-4 text-red-500" />
+            </div>
+            <div className="flex-1">
+              <p className="text-sm font-medium mb-1">Buscar métricas via YouTube Data API</p>
+              <p className="text-xs text-muted-foreground">Insira o Channel ID (ex: UCxxxxxx) para buscar views, likes e comentários</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 mt-3">
+            <Input
+              placeholder="Channel ID (ex: UCxxxxxx)"
+              value={channelIdInput}
+              onChange={(e) => setChannelIdInput(e.target.value)}
+              className="flex-1"
+            />
+            <Button onClick={handleApiFetch} disabled={fetchMetrics.isPending}>
+              {fetchMetrics.isPending ? (
+                <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Buscando...</>
+              ) : (
+                <><RefreshCw className="h-4 w-4 mr-2" />Buscar</>
+              )}
+            </Button>
+          </div>
+        </Card>
+      )}
+
       {/* CSV Upload */}
       {canImportData && (
         <Collapsible open={showUpload} onOpenChange={setShowUpload}>

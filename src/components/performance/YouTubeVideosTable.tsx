@@ -318,7 +318,10 @@ export function YouTubeVideosTable({ videos, clientId, isLoading }: YouTubeVideo
                   {video.total_views?.toLocaleString() || 0}
                 </TableCell>
                 <TableCell className="text-muted-foreground">
-                  {video.watch_hours?.toLocaleString() || 0}
+                  {(video.likes || 0).toLocaleString()}
+                </TableCell>
+                <TableCell className="text-muted-foreground">
+                  {(video.comments || 0).toLocaleString()}
                 </TableCell>
                 <TableCell className="font-medium">
                   {video.click_rate?.toFixed(1) || 0}%
