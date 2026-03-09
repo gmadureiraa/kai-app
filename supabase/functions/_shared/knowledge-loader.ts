@@ -535,7 +535,7 @@ export async function getFullContentContext(params: FullContentContextParams & {
   try {
     const { data: client, error } = await supabase
       .from("clients")
-      .select("name, identity_guide, description, context_notes, social_media")
+      .select("name, identity_guide, description, context_notes, social_media, content_guidelines")
       .eq("id", clientId)
       .single();
     
