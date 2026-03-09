@@ -31,8 +31,6 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <WorkspaceProvider>
-            <TokenErrorProvider>
-              <UpgradePromptProvider>
                 <GlobalKAIProvider>
                   <Routes>
                     {/* Public routes */}
