@@ -80,6 +80,82 @@ export async function parseOpenAIStream(
 }
 
 /**
+ * Stream SSE to callbacks — robust parser with proper buffering for CRLF and partial chunks
+ */
+export interface StreamSSECallbacks {
+  onDelta: (fullContent: string) => void;
+  onDone?: () => void;
+  onImage?: (url: string) => void;
+}
+
+export async function streamSSEToCallback(
+  reader: ReadableStreamDefaultReader<Uint8Array>,
+  callbacks: StreamSSECallbacks
+): Promise<string> {
+  const decoder = new TextDecoder();
+  let buffer = "";
+  let fullContent = "";
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split(/\r?\n/);
+    buffer = lines.pop() || "";
+
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith(":")) continue;
+      if (!trimmed.startsWith("data: ")) continue;
+
+      const jsonStr = trimmed.slice(6).trim();
+      if (jsonStr === "[DONE]") continue;
+
+      try {
+        const parsed = JSON.parse(jsonStr);
+        const delta = parsed.choices?.[0]?.delta;
+
+        if (delta?.content) {
+          fullContent += delta.content;
+          callbacks.onDelta(fullContent);
+        }
+
+        if (delta?.image) {
+          callbacks.onImage?.(delta.image);
+        }
+      } catch {
+        // Ignore parse errors for incomplete chunks
+      }
+    }
+  }
+
+  // Flush remaining buffer
+  if (buffer.trim()) {
+    for (const rawLine of buffer.split(/\r?\n/)) {
+      const line = rawLine.trim();
+      if (!line || line.startsWith(":") || !line.startsWith("data: ")) continue;
+      const jsonStr = line.slice(6).trim();
+      if (jsonStr === "[DONE]") continue;
+      try {
+        const parsed = JSON.parse(jsonStr);
+        const delta = parsed.choices?.[0]?.delta;
+        if (delta?.content) {
+          fullContent += delta.content;
+          callbacks.onDelta(fullContent);
+        }
+        if (delta?.image) {
+          callbacks.onImage?.(delta.image);
+        }
+      } catch { /* ignore */ }
+    }
+  }
+
+  callbacks.onDone?.();
+  return fullContent;
+}
+
+/**
  * Make a streaming request to kai-content-agent and parse the response
  */
 export async function callKaiContentAgent(params: {

@@ -1,96 +1,56 @@
 
 
-# Limpeza Final + Melhorias Baseadas em Pesquisa para kAI Chat e Canvas
+## Diagnóstico: Por que as automações não estão postando
 
-## Parte 1: Limpeza Restante (~800 linhas)
+### Problema 1: LinkedIn - Itens criados mas nunca publicados
+As 3 automações de LinkedIn (Artigo de Opinião, Building in Public, Case & Prova Social) estão **funcionando corretamente** na geração de conteúdo e imagens. O problema é que todas estão com `auto_publish: false`. Os itens são criados com status "idea" no planejamento e ficam lá esperando publicação manual. Nenhum deles jamais é publicado automaticamente.
 
-### Arquivos completamente não utilizados para deletar
-| Arquivo | Linhas | Motivo |
-|---------|--------|--------|
-| `src/lib/sse.ts` | 99 | Duplicata exata do `parseOpenAIStream.ts`. Zero imports |
-| `src/lib/retry.ts` | ~50 | Zero imports |
-| `src/lib/errors.ts` | ~50 | Zero imports |
-| `supabase/functions/chat/index.ts` | 548 | Edge function legada. Único uso: `KaiSettingsTab` chama para regenerar contexto — pode ser migrado para `kai-simple-chat` ou `kai-content-agent` |
+### Problema 2: Threads - Nenhuma automação configurada
+As credenciais do Threads (conta `madureira0x`) estão válidas, mas **não existe nenhuma automação** direcionada ao Threads.
 
-### KaiSettingsTab: Migrar chamada `chat` → `kai-simple-chat`
-- `KaiSettingsTab.tsx` linha 141 chama `supabase.functions.invoke("chat")` para regenerar contexto do cliente
-- Migrar para chamar `kai-simple-chat` (ou melhor: `generate-client-context` que já existe)
-- Após migração, a edge function `chat/` (548 linhas) pode ser deletada
+### Problema 3: Bug no retry de imagem
+No `process-automations`, linha ~1322, o retry de geração de imagem referencia a variável `resolvedImagePrompt` que **não existe** no escopo (o nome correto é `fullImagePrompt`). Isso faz o retry falhar silenciosamente.
+
+### Problema 4: Qualidade do conteúdo LinkedIn repetitivo
+Os posts gerados para LinkedIn estão todos girando em torno do mesmo tema ("clareza vs complexidade em Web3"). Falta diversidade temática e o sistema de variação (que existe para tweets) não está implementado para LinkedIn.
 
 ---
 
-## Parte 2: Melhorias do kAI Chat (baseadas em pesquisa)
+## Plano de Implementação
 
-### 2.1 Context Window Management — Sliding Window + Summarization
-**Problema atual**: O chat envia `messages.slice(-10)` como histórico (linha 228 do `useKAISimpleChat`), o que é um sliding window simples. Conversas longas perdem contexto completamente após 10 mensagens.
+### 1. Corrigir bug do retry de imagem no process-automations
+- Substituir `resolvedImagePrompt` por `fullImagePrompt` na linha do retry
 
-**Melhoria**: Implementar **anchored iterative summarization** no backend:
-- Quando o histórico excede 10 mensagens, resumir as mais antigas em um "session summary"
-- Manter as últimas 5 mensagens intactas + o resumo condensado
-- Guardar o resumo na tabela `kai_chat_conversations` (novo campo `context_summary`)
-- O backend faz: `[system_prompt, {role: "system", content: summary}, ...last5messages, user_message]`
-- Isso mantém o contexto de longo prazo sem explodir tokens
+### 2. Criar sistema de variação para LinkedIn (anti-repetição)
+Adicionar categorias editoriais para LinkedIn similares ao `GM_VARIATION_CATEGORIES` dos tweets:
+- **Artigo de Opinião**: Análise contrarian de tendência, dados concretos, framework próprio
+- **Building in Public**: Bastidores reais, números, aprendizados honestos, erros
+- **Case & Prova Social**: Resultados de clientes, métricas antes/depois, processo
 
-**Implementação**:
-- Novo campo `context_summary TEXT` na tabela `kai_chat_conversations`
-- No `kai-simple-chat`: quando `history.length > 10`, chamar Gemini Flash Lite para resumir as mensagens antigas em ~500 tokens e salvar
-- No próximo request, incluir o summary como mensagem de sistema adicional
+Cada automação LinkedIn receberá um `variation_index` rotativo com sub-temas específicos para evitar repetição.
 
-### 2.2 SSE Streaming Robustness no Frontend
-**Problema atual**: `useKAISimpleChat` faz parsing SSE inline (linhas 267-306) sem:
-- Buffer de linhas parciais entre chunks (se JSON chega dividido entre 2 chunks, silenciosamente ignora)
-- Flush do buffer final (dados na última linha sem `\n` são perdidos)
-- Sem detecção de `\r\n` (CRLF)
+### 3. Melhorar prompts LinkedIn com estratégia de conteúdo
+Enriquecer os prompts usando o guia de conteúdo do Madureira (`public/clients/madureira/guia-conteudo.md`):
+- Incorporar os 5 pilares de conteúdo como rotação temática
+- Usar tom de voz definido: técnico mas didático, direto, visionário
+- Adicionar instruções de formatação específicas para LinkedIn (quebras de linha, storytelling, CTA)
 
-**Melhoria**: Extrair para usar o `parseOpenAIStream` que já existe (e é mais robusto), ou melhor, criar uma função `streamSSEToCallback` em `parseOpenAIStream.ts` que aceite um callback `onDelta`:
+### 4. Habilitar auto_publish para LinkedIn (com revisão inteligente)
+Alterar as 3 automações de LinkedIn para `auto_publish: true` para que os posts sejam publicados automaticamente após geração.
 
-```text
-streamSSEToCallback(reader, {
-  onDelta: (token) => { /* update message */ },
-  onDone: () => { /* finalize */ },
-  onImage: (url) => { /* handle image */ }
-})
-```
+### 5. Criar automações para Threads
+Criar 2-3 automações de Threads para o perfil Madureira:
+- **Threads Diário** (daily): Repurpose do melhor tweet do dia ou insight rápido
+- **Threads Semanal** (weekly): Versão expandida de um tweet de alta performance
 
-Isso elimina a duplicação de parsing SSE no hook.
-
-### 2.3 Melhorar Detecção de Formato Implícito no Backend
-**Problema atual**: Quando o usuário diz "cria outro" sem especificar formato, o `kai-simple-chat` analisa as últimas 5 mensagens do histórico para detectar formato anterior. Mas com o novo sliding window + summarization, esse contexto pode se perder.
-
-**Melhoria**: Salvar o último formato usado como metadata na conversa (`last_format_used` na tabela `kai_chat_conversations`), para que detecção implícita funcione mesmo em conversas longas.
+### 6. Melhorar geração de imagem para LinkedIn
+- Ajustar o aspect ratio para LinkedIn: `1.91:1` (landscape) em vez de `1:1`
+- Enriquecer prompts de imagem com contexto profissional/corporativo
+- Usar modelo `google/gemini-3-pro-image-preview` para maior qualidade nas imagens de LinkedIn
 
 ---
 
-## Parte 3: Melhorias do Canvas
-
-### 3.1 `chat-about-material` pode ser inlined no `kai-simple-chat`
-**Problema**: Edge function `chat-about-material` (204 linhas) é um mini-chat com contexto de material. Funcionalidade idêntica ao `kai-simple-chat` mas sem carregamento de contexto do cliente.
-
-**Melhoria**: Adicionar um parâmetro `materialContext` ao `kai-simple-chat` e quando presente, usar como contexto primário em vez de buscar identity guide. Deletar `chat-about-material/`.
-
-### 3.2 Canvas Floating Chat — Unificar com `useKAISimpleChat`
-O `CanvasFloatingChat` já usa `useKAISimpleChat` — está correto. Sem mudança necessária.
-
----
-
-## Resumo de Impacto
-
-| Ação | Linhas |
-|------|--------|
-| Deletar `sse.ts`, `retry.ts`, `errors.ts` | -200 |
-| Deletar `chat/index.ts` (edge function) | -548 |
-| Deletar `chat-about-material/index.ts` | -204 |
-| Context summarization (novo código) | +80 |
-| SSE streaming refactor | +30 (net: extrair duplicação) |
-| **Total líquido** | **~-850 linhas** |
-
-## Ordem de Execução
-
-1. Deletar `src/lib/sse.ts`, `src/lib/retry.ts`, `src/lib/errors.ts`
-2. Migrar `KaiSettingsTab` para usar `generate-client-context` em vez de `chat`
-3. Deletar `supabase/functions/chat/`
-4. Adicionar `materialContext` support ao `kai-simple-chat`, migrar `MaterialChatNode`, deletar `chat-about-material/`
-5. Criar `streamSSEToCallback()` em `parseOpenAIStream.ts` e refatorar `useKAISimpleChat` para usá-la
-6. Migration: adicionar `context_summary` e `last_format_used` à tabela `kai_chat_conversations`
-7. Implementar anchored summarization no `kai-simple-chat` (quando history > 10)
+### Arquivos a modificar
+1. `supabase/functions/process-automations/index.ts` - Fix retry bug, adicionar variação LinkedIn, melhorar prompts
+2. Database: Atualizar `planning_automations` para habilitar auto_publish nas automações LinkedIn e criar novas automações Threads
 

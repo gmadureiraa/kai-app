@@ -138,48 +138,14 @@ export const KaiSettingsTab = ({ clientId, client }: KaiSettingsTabProps) => {
     setIsRegenerating(true);
     try {
       // Regenerate client context using AI
-      const { data, error } = await supabase.functions.invoke("chat", {
-        body: {
-          messages: [{
-            role: "user",
-            content: `Analise todas as informações do cliente "${client.name}" e gere um documento completo de contexto em markdown, incluindo:
-            
-- Descrição: ${formData.description}
-- Tags: ${JSON.stringify(formData.tags)}
-- Redes Sociais: ${JSON.stringify(formData.social_media)}
-- Websites cadastrados: ${websites?.map(w => w.url).join(", ")}
-- Documentos: ${documents?.map(d => d.name).join(", ")}
-
-Estruture o documento com seções para: Visão Geral, Posicionamento, Tom de Voz, Público-Alvo, Presença Digital, Pontos-Chave para Conteúdo.`
-          }],
-          systemPrompt: "Você é um especialista em branding e marketing digital. Gere documentos de contexto completos e bem estruturados para perfis.",
-        },
+      const { data, error } = await supabase.functions.invoke("generate-client-context", {
+        body: { clientId },
       });
 
       if (error) throw error;
 
-      // Parse streaming response
-      if (data) {
-        const reader = data.getReader();
-        const decoder = new TextDecoder();
-        let result = "";
-        
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          const chunk = decoder.decode(value);
-          const lines = chunk.split("\n");
-          for (const line of lines) {
-            if (line.startsWith("data: ") && !line.includes("[DONE]")) {
-              try {
-                const json = JSON.parse(line.slice(6));
-                result += json.choices?.[0]?.delta?.content || "";
-              } catch {}
-            }
-          }
-        }
-
-        setFormData(prev => ({ ...prev, context_notes: result }));
+      if (data?.context) {
+        setFormData(prev => ({ ...prev, context_notes: data.context }));
         toast.success("Contexto regenerado com IA");
       }
     } catch (error) {
