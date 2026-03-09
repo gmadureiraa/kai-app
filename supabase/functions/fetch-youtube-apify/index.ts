@@ -125,12 +125,14 @@ serve(async (req) => {
         const datasetResponse = await fetch(datasetUrl);
         items = await datasetResponse.json();
         console.log(`[fetch-youtube-apify] Got ${items.length} items with token ...${APIFY_API_TOKEN.slice(-4)}`);
-        break; // Success, exit the loop
+        break; // Success, exit retry loop
       } catch (tokenErr) {
-        console.error(`[fetch-youtube-apify] Token ...${APIFY_API_TOKEN.slice(-4)} failed:`, tokenErr);
+        console.error(`[fetch-youtube-apify] Token ...${APIFY_API_TOKEN.slice(-4)} attempt ${attempt + 1} failed:`, tokenErr);
         lastError = tokenErr instanceof Error ? tokenErr.message : "Unknown token error";
-        continue;
+        if (attempt < MAX_RETRIES) continue; // retry
       }
+      } // end retry loop
+      if (items.length > 0) break; // success, exit token loop
     }
 
     if (!Array.isArray(items) || items.length === 0) {
