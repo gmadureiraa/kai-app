@@ -39,7 +39,7 @@ const App = () => (
                     {/* Main app route - fixed to /kaleidos */}
                     <Route path="/kaleidos" element={<WorkspaceRouter />}>
                       <Route index element={<Kai />} />
-                      <Route path="docs" element={<Documentation />} />
+                      
                     </Route>
                     
                     {/* No workspace page */}

@@ -144,12 +144,6 @@ export default function Kai() {
           );
         case "clients":
           return <ClientsManagementTool />;
-        case "docs":
-          return (
-            <div className="p-6 overflow-y-auto h-full">
-              <KaiDocsTab />
-            </div>
-          );
         case "settings":
           return <SettingsTab />;
         case "automations":

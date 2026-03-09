@@ -157,7 +157,7 @@ export function InstagramCSVUpload({ clientId }: InstagramCSVUploadProps) {
             }
           }
 
-          console.log(`[InstagramCSV] Parsed ${deduped.size} unique posts from ${rows.length - 1} rows`);
+          
           resolve(Array.from(deduped.values()));
         } catch (err) {
           reject(err);

@@ -252,7 +252,7 @@ export function useLateConnection({ clientId }: UseLateConnectionProps) {
         throw new Error(error.message);
       }
 
-      console.log('[late-post] Success:', data);
+      
 
       const displayName = platformNames[platform] || platform;
       

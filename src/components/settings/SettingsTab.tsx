@@ -332,6 +332,8 @@ export function SettingsTab() {
         return renderNotificationsSection();
       case "appearance":
         return renderAppearanceSection();
+      case "docs":
+        return <Documentation />;
       default:
         return renderProfileSection();
     }
