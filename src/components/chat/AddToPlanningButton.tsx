@@ -5,8 +5,6 @@ import { cn } from "@/lib/utils";
 import { PlanningItemDialog } from "@/components/planning/PlanningItemDialog";
 import { usePlanningItems, CreatePlanningItemInput } from "@/hooks/usePlanningItems";
 import { useWorkspaceContext } from "@/contexts/WorkspaceContext";
-import { usePlanFeatures } from "@/hooks/usePlanFeatures";
-import { useUpgradePrompt } from "@/hooks/useUpgradePrompt";
 import { toast } from "sonner";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
