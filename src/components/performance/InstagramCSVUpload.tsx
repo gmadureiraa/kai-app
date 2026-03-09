@@ -33,6 +33,7 @@ export function InstagramCSVUpload({ clientId }: InstagramCSVUploadProps) {
   function normalizeHeader(h: any): string {
     if (!h) return "";
     return String(h).trim().toLowerCase()
+      .replace(/^\ufeff/, "") // Remove BOM
       .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
       .replace(/['"]/g, "");
   }
