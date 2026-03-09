@@ -25,19 +25,20 @@ import {
 } from "../_shared/content-validator.ts";
 
 import {
-  getFullContentContext,
-  getStructuredVoice,
   getClientAvoidList,
   normalizeFormatKey,
 } from "../_shared/knowledge-loader.ts";
 
 import {
-  buildForbiddenPhrasesSection,
-  UNIVERSAL_OUTPUT_RULES,
   buildReviewerChecklist,
 } from "../_shared/quality-rules.ts";
 
-// NEW: Import centralized LLM module with retry + fallback
+// Centralized prompt builder
+import {
+  buildWriterSystemPrompt,
+} from "../_shared/prompt-builder.ts";
+
+// Centralized LLM module with retry + fallback
 import {
   callLLM,
   LLMError,
