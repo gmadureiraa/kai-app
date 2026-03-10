@@ -1301,7 +1301,7 @@ serve(async (req) => {
             }
             
             // Build enriched prompt with full context + RSS data
-            const rssPrompt = buildEnrichedPrompt(
+            const rssPrompt = await buildEnrichedPrompt(
               automation.prompt_template,
               triggerData,
               automation,
