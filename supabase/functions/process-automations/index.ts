@@ -1486,7 +1486,7 @@ serve(async (req) => {
             }
             
             if (automation.image_prompt_template) {
-              imagePrompt = replaceTemplateVariables(
+              imagePrompt = await replaceTemplateVariables(
                 automation.image_prompt_template,
                 triggerData,
                 automation.name
