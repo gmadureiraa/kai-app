@@ -206,6 +206,7 @@ serve(async (req) => {
     }
 
     const normalizedFormat = normalizeFormatKey(format);
+    const formatContract = buildFormatContract(normalizedFormat);
     console.log(`[UNIFIED-API] Starting generation for format: ${normalizedFormat}`);
 
     // Token tracking
