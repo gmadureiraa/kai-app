@@ -197,13 +197,25 @@ export function AutomationsTab() {
     });
   }, [automations, clientFilter, triggerFilter]);
 
-  // Group by client
+  // Group by client with sorting: active first, then by last_triggered_at
   const groupedByClient = useMemo(() => {
+    const sortAutomations = (list: PlanningAutomation[]) => {
+      return [...list].sort((a, b) => {
+        if (a.is_active !== b.is_active) return a.is_active ? -1 : 1;
+        const aTime = a.last_triggered_at ? new Date(a.last_triggered_at).getTime() : 0;
+        const bTime = b.last_triggered_at ? new Date(b.last_triggered_at).getTime() : 0;
+        return bTime - aTime;
+      });
+    };
     const groups: Record<string, PlanningAutomation[]> = {};
     for (const a of filteredAutomations) {
       const key = a.client_id || '__none__';
       if (!groups[key]) groups[key] = [];
       groups[key].push(a);
+    }
+    // Sort within each group
+    for (const key of Object.keys(groups)) {
+      groups[key] = sortAutomations(groups[key]);
     }
     return groups;
   }, [filteredAutomations]);
