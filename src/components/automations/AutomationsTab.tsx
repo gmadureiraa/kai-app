@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Plus, Zap, Calendar, Rss, Webhook, MoreVertical, Pause, Play, Trash2, Pencil, TestTube2, History, Loader2, Filter, Users } from 'lucide-react';
+import { Plus, Zap, Calendar, Rss, Webhook, MoreVertical, Pause, Play, Trash2, Pencil, TestTube2, History, Loader2, Filter, Users, Twitter, Linkedin, Instagram, Youtube, Facebook, AtSign, Video, Mail, FileText, Globe } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -37,6 +37,24 @@ import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
+import { PLATFORM_COLOR_MAP, ALL_PUBLISH_PLATFORMS } from '@/types/contentTypes';
+
+const platformLucideIcons: Record<string, React.ElementType> = {
+  twitter: Twitter,
+  linkedin: Linkedin,
+  instagram: Instagram,
+  threads: AtSign,
+  tiktok: Video,
+  youtube: Youtube,
+  facebook: Facebook,
+  newsletter: Mail,
+  blog: FileText,
+};
+
+/** Strip redundant platform prefixes from automation names */
+function cleanAutomationName(name: string): string {
+  return name.replace(/^(LinkedIn|Twitter|Thread Twitter|Instagram|Threads|YouTube|Facebook|TikTok|Tweet|Newsletter|Blog)\s*[—–-]\s*/i, '').trim();
+}
 
 const triggerIcons = {
   schedule: Calendar,
@@ -179,13 +197,25 @@ export function AutomationsTab() {
     });
   }, [automations, clientFilter, triggerFilter]);
 
-  // Group by client
+  // Group by client with sorting: active first, then by last_triggered_at
   const groupedByClient = useMemo(() => {
+    const sortAutomations = (list: PlanningAutomation[]) => {
+      return [...list].sort((a, b) => {
+        if (a.is_active !== b.is_active) return a.is_active ? -1 : 1;
+        const aTime = a.last_triggered_at ? new Date(a.last_triggered_at).getTime() : 0;
+        const bTime = b.last_triggered_at ? new Date(b.last_triggered_at).getTime() : 0;
+        return bTime - aTime;
+      });
+    };
     const groups: Record<string, PlanningAutomation[]> = {};
     for (const a of filteredAutomations) {
       const key = a.client_id || '__none__';
       if (!groups[key]) groups[key] = [];
       groups[key].push(a);
+    }
+    // Sort within each group
+    for (const key of Object.keys(groups)) {
+      groups[key] = sortAutomations(groups[key]);
     }
     return groups;
   }, [filteredAutomations]);
@@ -438,7 +468,15 @@ function AutomationCard({
 }: AutomationCardProps) {
   const TriggerIcon = triggerIcons[automation.trigger_type];
   const contentLabel = contentTypeLabels[automation.content_type] || automation.content_type;
-  
+  const displayName = cleanAutomationName(automation.name);
+
+  // Collect all platforms to display
+  const allPlatforms: string[] = automation.platforms?.length
+    ? automation.platforms
+    : automation.platform
+      ? [automation.platform]
+      : [];
+
   return (
     <div
       className={cn(
@@ -459,19 +497,33 @@ function AutomationCard({
         
         <div className="min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <h4 className="font-medium text-sm truncate">{automation.name}</h4>
+            <h4 className="font-medium text-sm truncate">{displayName}</h4>
             <Badge variant="outline" className="text-xs shrink-0">
               {contentLabel}
             </Badge>
-            {automation.platform && (
-              <Badge variant="outline" className="text-xs capitalize shrink-0">
-                {automation.platform}
-              </Badge>
-            )}
+            {/* Platform icons with brand colors */}
+            {allPlatforms.map((p) => {
+              const PIcon = platformLucideIcons[p] || Globe;
+              const brandColor = PLATFORM_COLOR_MAP[p];
+              return (
+                <span
+                  key={p}
+                  className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-xs font-medium shrink-0"
+                  style={{
+                    backgroundColor: brandColor ? `color-mix(in srgb, ${brandColor} 15%, transparent)` : undefined,
+                    color: brandColor || undefined,
+                    border: `1px solid color-mix(in srgb, ${brandColor || 'currentColor'} 30%, transparent)`,
+                  }}
+                >
+                  <PIcon className="h-3 w-3" />
+                  {ALL_PUBLISH_PLATFORMS.find(pp => pp.value === p)?.label || p}
+                </span>
+              );
+            })}
             {automation.auto_generate_content && (
               <Badge variant="outline" className="text-xs bg-purple-500/10 text-purple-600 border-purple-500/30 shrink-0">IA</Badge>
             )}
-            {(automation as any).auto_publish && (
+            {automation.auto_publish && (
               <Badge variant="outline" className="text-xs bg-green-500/10 text-green-600 border-green-500/30 shrink-0">
                 Auto-publish
               </Badge>

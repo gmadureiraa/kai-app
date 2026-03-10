@@ -1,48 +1,56 @@
 
 
-# Reorganização Visual das Automações
+## Diagnóstico: Por que as automações não estão postando
 
-## Problema Atual
-Os nomes das automações incluem a rede social redundantemente (ex: "LinkedIn — Newsletter do Dia", "Thread Twitter — Newsletter"), quando já existe um badge de plataforma ao lado. Além disso, os badges de plataforma são genéricos e pouco visuais.
+### Problema 1: LinkedIn - Itens criados mas nunca publicados
+As 3 automações de LinkedIn (Artigo de Opinião, Building in Public, Case & Prova Social) estão **funcionando corretamente** na geração de conteúdo e imagens. O problema é que todas estão com `auto_publish: false`. Os itens são criados com status "idea" no planejamento e ficam lá esperando publicação manual. Nenhum deles jamais é publicado automaticamente.
 
-## Mudanças
+### Problema 2: Threads - Nenhuma automação configurada
+As credenciais do Threads (conta `madureira0x`) estão válidas, mas **não existe nenhuma automação** direcionada ao Threads.
 
-### 1. Ícones coloridos de plataforma em vez de badges de texto
-Substituir os badges de texto "Twitter", "LinkedIn" etc. por ícones com cores de marca (mesmo padrão já usado no Planejamento). Cada plataforma terá seu ícone SVG + cor de fundo, exibido como chip visual ao lado do nome.
+### Problema 3: Bug no retry de imagem
+No `process-automations`, linha ~1322, o retry de geração de imagem referencia a variável `resolvedImagePrompt` que **não existe** no escopo (o nome correto é `fullImagePrompt`). Isso faz o retry falhar silenciosamente.
 
-Mapa de cores:
-- Twitter/X → cinza escuro
-- LinkedIn → azul #0077B5
-- Instagram → gradiente rosa/roxo
-- Threads → cinza
-- YouTube → vermelho
-- Facebook → azul #1877F2
-- TikTok → preto
-- Newsletter → verde
-- Blog → laranja
+### Problema 4: Qualidade do conteúdo LinkedIn repetitivo
+Os posts gerados para LinkedIn estão todos girando em torno do mesmo tema ("clareza vs complexidade em Web3"). Falta diversidade temática e o sistema de variação (que existe para tweets) não está implementado para LinkedIn.
 
-### 2. Limpeza inteligente dos nomes
-Criar uma função `cleanAutomationName` que remove prefixos de plataforma redundantes do nome:
-- "LinkedIn — Newsletter do Dia" → "Newsletter do Dia"
-- "Thread Twitter — Newsletter" → "Newsletter" (Thread aparece como content type badge)
-- "Tweet — Dica & Ferramenta" → "Dica & Ferramenta" (Tweet aparece como content type)
-- Nomes sem prefixo (ex: "GM Diário Defiverso") ficam intactos
+---
 
-### 3. Layout melhorado do card
-```text
-[📅] Newsletter do Dia          [Post] [🔵 LinkedIn] [🟣 IA] [🟢 Auto]   [🔛] [⋮]
-     RSS Feed: rss.beehiiv.com
-     Última: há 3 horas • 2 cards
-```
+## Plano de Implementação
 
-Mudanças visuais:
-- Ícones de plataforma com fundo colorido (circulares, 20px)
-- Badges `platforms[]` também renderizados (para automações multi-plataforma)
-- Separação visual mais clara entre nome/tags e metadados
+### 1. Corrigir bug do retry de imagem no process-automations
+- Substituir `resolvedImagePrompt` por `fullImagePrompt` na linha do retry
 
-### 4. Ordenação dentro de cada grupo
-Automações ativas primeiro, depois pausadas. Dentro de cada grupo, ordenar por `last_triggered_at` (mais recente primeiro).
+### 2. Criar sistema de variação para LinkedIn (anti-repetição)
+Adicionar categorias editoriais para LinkedIn similares ao `GM_VARIATION_CATEGORIES` dos tweets:
+- **Artigo de Opinião**: Análise contrarian de tendência, dados concretos, framework próprio
+- **Building in Public**: Bastidores reais, números, aprendizados honestos, erros
+- **Case & Prova Social**: Resultados de clientes, métricas antes/depois, processo
 
-## Arquivo Afetado
-`src/components/automations/AutomationsTab.tsx` — único arquivo. Todas as mudanças são no componente `AutomationCard` e helpers.
+Cada automação LinkedIn receberá um `variation_index` rotativo com sub-temas específicos para evitar repetição.
+
+### 3. Melhorar prompts LinkedIn com estratégia de conteúdo
+Enriquecer os prompts usando o guia de conteúdo do Madureira (`public/clients/madureira/guia-conteudo.md`):
+- Incorporar os 5 pilares de conteúdo como rotação temática
+- Usar tom de voz definido: técnico mas didático, direto, visionário
+- Adicionar instruções de formatação específicas para LinkedIn (quebras de linha, storytelling, CTA)
+
+### 4. Habilitar auto_publish para LinkedIn (com revisão inteligente)
+Alterar as 3 automações de LinkedIn para `auto_publish: true` para que os posts sejam publicados automaticamente após geração.
+
+### 5. Criar automações para Threads
+Criar 2-3 automações de Threads para o perfil Madureira:
+- **Threads Diário** (daily): Repurpose do melhor tweet do dia ou insight rápido
+- **Threads Semanal** (weekly): Versão expandida de um tweet de alta performance
+
+### 6. Melhorar geração de imagem para LinkedIn
+- Ajustar o aspect ratio para LinkedIn: `1.91:1` (landscape) em vez de `1:1`
+- Enriquecer prompts de imagem com contexto profissional/corporativo
+- Usar modelo `google/gemini-3-pro-image-preview` para maior qualidade nas imagens de LinkedIn
+
+---
+
+### Arquivos a modificar
+1. `supabase/functions/process-automations/index.ts` - Fix retry bug, adicionar variação LinkedIn, melhorar prompts
+2. Database: Atualizar `planning_automations` para habilitar auto_publish nas automações LinkedIn e criar novas automações Threads
 
