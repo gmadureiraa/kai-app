@@ -543,9 +543,9 @@ function buildEnrichedPrompt(
   contentType: string,
   mediaUrls: string[],
   variationContext?: { category: string; instruction: string; recentTweets: string[] }
-): string {
+): Promise<string> {
   // First, replace template variables if we have a template
-  let prompt = replaceTemplateVariables(template || '', data, automation.name);
+  let prompt = await replaceTemplateVariables(template || '', data, automation.name);
   
   const formatLabel = CONTENT_TYPE_LABELS[contentType] || contentType;
   
