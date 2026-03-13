@@ -473,6 +473,7 @@ mcpServer.tool("invoke_function", {
 
 const app = new Hono();
 const transport = new StreamableHttpTransport();
+const httpHandler = transport.bind(mcpServer);
 
 // Auth middleware - validate MCP_ACCESS_TOKEN
 app.use("/*", async (c, next) => {
@@ -486,7 +487,7 @@ app.use("/*", async (c, next) => {
 });
 
 app.all("/*", async (c) => {
-  return await transport.handleRequest(c.req.raw, mcpServer);
+  return await httpHandler(c.req.raw);
 });
 
 Deno.serve(app.fetch);
