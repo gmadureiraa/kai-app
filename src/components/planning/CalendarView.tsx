@@ -106,8 +106,9 @@ function CalendarCard({
   const isAutoPublish = canAutoPublish(platform);
   const config = statusConfig[item.status] || statusConfig.idea;
   
-  const scheduledTime = item.scheduled_at ? format(parseISO(item.scheduled_at), 'HH:mm') : null;
-  const scheduledDate = item.scheduled_at ? parseISO(item.scheduled_at) : null;
+  const effectiveDate = item.scheduled_at || item.published_at;
+  const scheduledTime = effectiveDate ? format(parseISO(effectiveDate), 'HH:mm') : null;
+  const scheduledDate = effectiveDate ? parseISO(effectiveDate) : null;
   const daysUntil = scheduledDate ? differenceInDays(scheduledDate, new Date()) : null;
   
   return (
@@ -204,10 +205,10 @@ function CalendarCard({
                 {item.platform.charAt(0).toUpperCase() + item.platform.slice(1)}
               </span>
             )}
-            {item.scheduled_at && (
-              <span className="flex items-center gap-1 text-orange-600">
+            {(item.scheduled_at || item.published_at) && (
+              <span className={cn("flex items-center gap-1", item.published_at && !item.scheduled_at ? "text-emerald-600" : "text-orange-600")}>
                 <Clock className="h-3 w-3" />
-                {format(parseISO(item.scheduled_at), "dd/MM HH:mm")}
+                {format(parseISO((item.scheduled_at || item.published_at)!), "dd/MM HH:mm")}
               </span>
             )}
           </div>
@@ -275,13 +276,13 @@ export function CalendarView({
 
   const getItemsForDay = useCallback((day: Date) => {
     return items.filter(item => {
-      const itemDate = item.scheduled_at || item.due_date;
+      const itemDate = item.scheduled_at || item.published_at || item.due_date;
       if (!itemDate) return false;
       const parsedDate = typeof itemDate === 'string' ? parseISO(itemDate) : itemDate;
       return isSameDay(parsedDate, day);
     }).sort((a, b) => {
-      const timeA = a.scheduled_at ? parseISO(a.scheduled_at).getTime() : 0;
-      const timeB = b.scheduled_at ? parseISO(b.scheduled_at).getTime() : 0;
+      const timeA = (a.scheduled_at || a.published_at) ? parseISO(a.scheduled_at || a.published_at!).getTime() : 0;
+      const timeB = (b.scheduled_at || b.published_at) ? parseISO(b.scheduled_at || b.published_at!).getTime() : 0;
       return timeA - timeB;
     });
   }, [items]);
@@ -324,7 +325,7 @@ export function CalendarView({
     setDragOverDay(null);
     
     if (draggedItem && onMoveItem) {
-      const itemDate = draggedItem.scheduled_at || draggedItem.due_date;
+      const itemDate = draggedItem.scheduled_at || draggedItem.published_at || draggedItem.due_date;
       if (itemDate) {
         const parsedDate = typeof itemDate === 'string' ? parseISO(itemDate) : itemDate;
         if (isSameDay(parsedDate, day)) {
