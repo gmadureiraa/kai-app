@@ -325,7 +325,7 @@ export function CalendarView({
     setDragOverDay(null);
     
     if (draggedItem && onMoveItem) {
-      const itemDate = draggedItem.scheduled_at || draggedItem.due_date;
+      const itemDate = draggedItem.scheduled_at || draggedItem.published_at || draggedItem.due_date;
       if (itemDate) {
         const parsedDate = typeof itemDate === 'string' ? parseISO(itemDate) : itemDate;
         if (isSameDay(parsedDate, day)) {
