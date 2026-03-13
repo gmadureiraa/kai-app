@@ -4,7 +4,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
+const MCP_ACCESS_TOKEN = Deno.env.get("MCP_ACCESS_TOKEN")!;
 
 function getAdminClient() {
   return createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
@@ -15,14 +15,14 @@ function getAdminClient() {
 const mcpServer = new McpServer({
   name: "kaleidos-mcp",
   version: "1.0.0",
+  schemaAdapter: (schema: any) => schema,
 });
 
 // ---------- READ TOOLS ----------
 
-mcpServer.tool({
-  name: "list_tables",
+mcpServer.tool("list_tables", {
   description: "List all available database tables with row counts",
-  inputSchema: { type: "object", properties: {}, required: [] },
+  inputSchema: { type: "object" as const, properties: {}, required: [] },
   handler: async () => {
     const tables = [
       "clients", "planning_items", "planning_automations", "automations", "automation_runs",
@@ -40,15 +40,14 @@ mcpServer.tool({
       const { count } = await sb.from(t).select("*", { count: "exact", head: true });
       results.push({ table: t, count });
     }
-    return { content: [{ type: "text", text: JSON.stringify(results, null, 2) }] };
+    return { content: [{ type: "text" as const, text: JSON.stringify(results, null, 2) }] };
   },
 });
 
-mcpServer.tool({
-  name: "query_table",
+mcpServer.tool("query_table", {
   description: "Query any table with optional filters, ordering, and pagination. Supports read-only SELECT queries.",
   inputSchema: {
-    type: "object",
+    type: "object" as const,
     properties: {
       table: { type: "string", description: "Table name" },
       select: { type: "string", description: "Columns to select (default: *)" },
@@ -83,16 +82,15 @@ mcpServer.tool({
     query = query.limit(Math.min(limit || 100, 1000));
     if (offset) query = query.range(offset, offset + (limit || 100) - 1);
     const { data, error, count } = await query;
-    if (error) return { content: [{ type: "text", text: `Error: ${error.message}` }] };
-    return { content: [{ type: "text", text: JSON.stringify({ count, rows: data?.length, data }, null, 2) }] };
+    if (error) return { content: [{ type: "text" as const, text: `Error: ${error.message}` }] };
+    return { content: [{ type: "text" as const, text: JSON.stringify({ count, rows: data?.length, data }, null, 2) }] };
   },
 });
 
-mcpServer.tool({
-  name: "get_client",
+mcpServer.tool("get_client", {
   description: "Get full client profile with all related data (social credentials, websites, documents, voice profile, guidelines)",
   inputSchema: {
-    type: "object",
+    type: "object" as const,
     properties: {
       client_id: { type: "string", description: "Client UUID" },
     },
@@ -109,7 +107,7 @@ mcpServer.tool({
     ]);
     return {
       content: [{
-        type: "text",
+        type: "text" as const,
         text: JSON.stringify({
           profile: client.data,
           social_credentials: creds.data,
@@ -122,11 +120,10 @@ mcpServer.tool({
   },
 });
 
-mcpServer.tool({
-  name: "get_content_library",
+mcpServer.tool("get_content_library", {
   description: "Get content library items for a client",
   inputSchema: {
-    type: "object",
+    type: "object" as const,
     properties: {
       client_id: { type: "string" },
       limit: { type: "number" },
@@ -136,32 +133,30 @@ mcpServer.tool({
   handler: async ({ client_id, limit }: any) => {
     const sb = getAdminClient();
     const { data, error } = await sb.from("client_content_library").select("*").eq("client_id", client_id).order("created_at", { ascending: false }).limit(limit || 50);
-    if (error) return { content: [{ type: "text", text: `Error: ${error.message}` }] };
-    return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
+    if (error) return { content: [{ type: "text" as const, text: `Error: ${error.message}` }] };
+    return { content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }] };
   },
 });
 
-mcpServer.tool({
-  name: "get_references",
+mcpServer.tool("get_references", {
   description: "Get reference library items for a client",
   inputSchema: {
-    type: "object",
+    type: "object" as const,
     properties: { client_id: { type: "string" }, limit: { type: "number" } },
     required: ["client_id"],
   },
   handler: async ({ client_id, limit }: any) => {
     const sb = getAdminClient();
     const { data, error } = await sb.from("client_reference_library").select("*").eq("client_id", client_id).order("created_at", { ascending: false }).limit(limit || 50);
-    if (error) return { content: [{ type: "text", text: `Error: ${error.message}` }] };
-    return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
+    if (error) return { content: [{ type: "text" as const, text: `Error: ${error.message}` }] };
+    return { content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }] };
   },
 });
 
-mcpServer.tool({
-  name: "get_metrics",
+mcpServer.tool("get_metrics", {
   description: "Get platform metrics and social posts for a client (twitter, linkedin, instagram, youtube)",
   inputSchema: {
-    type: "object",
+    type: "object" as const,
     properties: {
       client_id: { type: "string" },
       platform: { type: "string", description: "Filter by platform: twitter, linkedin, instagram, youtube, all (default: all)" },
@@ -191,15 +186,14 @@ mcpServer.tool({
     queries.push(sb.from("platform_metrics").select("*").eq("client_id", client_id).order("metric_date", { ascending: false }).limit(lim).then(r => { result.platform_metrics = r.data; }));
 
     await Promise.all(queries);
-    return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+    return { content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }] };
   },
 });
 
-mcpServer.tool({
-  name: "get_automations",
+mcpServer.tool("get_automations", {
   description: "Get all automations and planning automations for a client, including recent runs",
   inputSchema: {
-    type: "object",
+    type: "object" as const,
     properties: { client_id: { type: "string" } },
     required: ["client_id"],
   },
@@ -212,7 +206,7 @@ mcpServer.tool({
     ]);
     return {
       content: [{
-        type: "text",
+        type: "text" as const,
         text: JSON.stringify({
           automations: automations.data,
           planning_automations: planningAutos.data,
@@ -223,11 +217,10 @@ mcpServer.tool({
   },
 });
 
-mcpServer.tool({
-  name: "get_planning",
+mcpServer.tool("get_planning", {
   description: "Get planning items (kanban cards, scheduled posts) for a client or workspace",
   inputSchema: {
-    type: "object",
+    type: "object" as const,
     properties: {
       client_id: { type: "string", description: "Client UUID (optional)" },
       workspace_id: { type: "string", description: "Workspace UUID (optional)" },
@@ -240,7 +233,6 @@ mcpServer.tool({
     const lim = limit || 100;
     const result: Record<string, any> = {};
 
-    // Planning items
     let piQuery = sb.from("planning_items").select("*").order("scheduled_at", { ascending: false }).limit(lim);
     if (client_id) piQuery = piQuery.eq("client_id", client_id);
     if (workspace_id) piQuery = piQuery.eq("workspace_id", workspace_id);
@@ -248,21 +240,19 @@ mcpServer.tool({
     const { data: items } = await piQuery;
     result.planning_items = items;
 
-    // Scheduled posts
     let spQuery = sb.from("scheduled_posts").select("*").order("scheduled_at", { ascending: false }).limit(lim);
     if (client_id) spQuery = spQuery.eq("client_id", client_id);
     const { data: scheduled } = await spQuery;
     result.scheduled_posts = scheduled;
 
-    return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+    return { content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }] };
   },
 });
 
-mcpServer.tool({
-  name: "search_knowledge",
+mcpServer.tool("search_knowledge", {
   description: "Search the global knowledge base by keyword or text",
   inputSchema: {
-    type: "object",
+    type: "object" as const,
     properties: {
       query: { type: "string", description: "Search query" },
       workspace_id: { type: "string" },
@@ -275,18 +265,42 @@ mcpServer.tool({
     let q = sb.from("global_knowledge").select("id, title, summary, category, tags, source_url, created_at").ilike("title", `%${query}%`).limit(limit || 20);
     if (workspace_id) q = q.eq("workspace_id", workspace_id);
     const { data, error } = await q;
-    if (error) return { content: [{ type: "text", text: `Error: ${error.message}` }] };
-    return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
+    if (error) return { content: [{ type: "text" as const, text: `Error: ${error.message}` }] };
+    return { content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }] };
+  },
+});
+
+mcpServer.tool("get_schema", {
+  description: "Get the column names and types for a specific table",
+  inputSchema: {
+    type: "object" as const,
+    properties: {
+      table: { type: "string", description: "Table name" },
+    },
+    required: ["table"],
+  },
+  handler: async ({ table }: any) => {
+    const sb = getAdminClient();
+    const { data, error } = await sb.from(table).select("*").limit(1);
+    if (error) return { content: [{ type: "text" as const, text: `Error: ${error.message}` }] };
+    if (!data || data.length === 0) {
+      return { content: [{ type: "text" as const, text: `Table "${table}" exists but has no rows to infer schema from.` }] };
+    }
+    const columns = Object.entries(data[0]).map(([key, value]) => ({
+      column: key,
+      type: value === null ? "unknown" : typeof value,
+      sample: typeof value === "object" ? JSON.stringify(value)?.slice(0, 100) : String(value)?.slice(0, 100),
+    }));
+    return { content: [{ type: "text" as const, text: JSON.stringify(columns, null, 2) }] };
   },
 });
 
 // ---------- WRITE TOOLS ----------
 
-mcpServer.tool({
-  name: "create_planning_item",
+mcpServer.tool("create_planning_item", {
   description: "Create a new planning item (content card) for a client",
   inputSchema: {
-    type: "object",
+    type: "object" as const,
     properties: {
       client_id: { type: "string" },
       workspace_id: { type: "string" },
@@ -303,7 +317,6 @@ mcpServer.tool({
   },
   handler: async (params: any) => {
     const sb = getAdminClient();
-    // Get first column for workspace
     const { data: cols } = await sb.from("kanban_columns").select("id").eq("workspace_id", params.workspace_id).order("position").limit(1);
     const columnId = cols?.[0]?.id;
 
@@ -320,16 +333,15 @@ mcpServer.tool({
       image_url: params.image_url || null,
       column_id: columnId,
     }).select().single();
-    if (error) return { content: [{ type: "text", text: `Error: ${error.message}` }] };
-    return { content: [{ type: "text", text: JSON.stringify({ success: true, item: data }, null, 2) }] };
+    if (error) return { content: [{ type: "text" as const, text: `Error: ${error.message}` }] };
+    return { content: [{ type: "text" as const, text: JSON.stringify({ success: true, item: data }, null, 2) }] };
   },
 });
 
-mcpServer.tool({
-  name: "update_planning_item",
+mcpServer.tool("update_planning_item", {
   description: "Update an existing planning item",
   inputSchema: {
-    type: "object",
+    type: "object" as const,
     properties: {
       id: { type: "string", description: "Planning item UUID" },
       title: { type: "string" },
@@ -344,22 +356,20 @@ mcpServer.tool({
   },
   handler: async ({ id, ...updates }: any) => {
     const sb = getAdminClient();
-    // Remove undefined values
     const cleanUpdates: Record<string, any> = {};
     for (const [k, v] of Object.entries(updates)) {
       if (v !== undefined) cleanUpdates[k] = v;
     }
     const { data, error } = await sb.from("planning_items").update(cleanUpdates).eq("id", id).select().single();
-    if (error) return { content: [{ type: "text", text: `Error: ${error.message}` }] };
-    return { content: [{ type: "text", text: JSON.stringify({ success: true, item: data }, null, 2) }] };
+    if (error) return { content: [{ type: "text" as const, text: `Error: ${error.message}` }] };
+    return { content: [{ type: "text" as const, text: JSON.stringify({ success: true, item: data }, null, 2) }] };
   },
 });
 
-mcpServer.tool({
-  name: "update_automation",
+mcpServer.tool("update_automation", {
   description: "Update a planning automation (prompt, schedule, config, etc.)",
   inputSchema: {
-    type: "object",
+    type: "object" as const,
     properties: {
       id: { type: "string", description: "Automation UUID" },
       updates: { type: "object", description: "Fields to update (any columns from planning_automations)" },
@@ -369,16 +379,15 @@ mcpServer.tool({
   handler: async ({ id, updates }: any) => {
     const sb = getAdminClient();
     const { data, error } = await sb.from("planning_automations").update(updates).eq("id", id).select().single();
-    if (error) return { content: [{ type: "text", text: `Error: ${error.message}` }] };
-    return { content: [{ type: "text", text: JSON.stringify({ success: true, automation: data }, null, 2) }] };
+    if (error) return { content: [{ type: "text" as const, text: `Error: ${error.message}` }] };
+    return { content: [{ type: "text" as const, text: JSON.stringify({ success: true, automation: data }, null, 2) }] };
   },
 });
 
-mcpServer.tool({
-  name: "insert_row",
+mcpServer.tool("insert_row", {
   description: "Insert a row into any table. Use with caution.",
   inputSchema: {
-    type: "object",
+    type: "object" as const,
     properties: {
       table: { type: "string", description: "Table name" },
       row: { type: "object", description: "Row data as key-value pairs" },
@@ -388,16 +397,15 @@ mcpServer.tool({
   handler: async ({ table, row }: any) => {
     const sb = getAdminClient();
     const { data, error } = await sb.from(table).insert(row).select().single();
-    if (error) return { content: [{ type: "text", text: `Error: ${error.message}` }] };
-    return { content: [{ type: "text", text: JSON.stringify({ success: true, data }, null, 2) }] };
+    if (error) return { content: [{ type: "text" as const, text: `Error: ${error.message}` }] };
+    return { content: [{ type: "text" as const, text: JSON.stringify({ success: true, data }, null, 2) }] };
   },
 });
 
-mcpServer.tool({
-  name: "update_row",
+mcpServer.tool("update_row", {
   description: "Update rows in any table by ID",
   inputSchema: {
-    type: "object",
+    type: "object" as const,
     properties: {
       table: { type: "string" },
       id: { type: "string", description: "Row UUID" },
@@ -408,16 +416,15 @@ mcpServer.tool({
   handler: async ({ table, id, updates }: any) => {
     const sb = getAdminClient();
     const { data, error } = await sb.from(table).update(updates).eq("id", id).select().single();
-    if (error) return { content: [{ type: "text", text: `Error: ${error.message}` }] };
-    return { content: [{ type: "text", text: JSON.stringify({ success: true, data }, null, 2) }] };
+    if (error) return { content: [{ type: "text" as const, text: `Error: ${error.message}` }] };
+    return { content: [{ type: "text" as const, text: JSON.stringify({ success: true, data }, null, 2) }] };
   },
 });
 
-mcpServer.tool({
-  name: "delete_row",
+mcpServer.tool("delete_row", {
   description: "Delete a row from any table by ID",
   inputSchema: {
-    type: "object",
+    type: "object" as const,
     properties: {
       table: { type: "string" },
       id: { type: "string" },
@@ -427,16 +434,15 @@ mcpServer.tool({
   handler: async ({ table, id }: any) => {
     const sb = getAdminClient();
     const { error } = await sb.from(table).delete().eq("id", id);
-    if (error) return { content: [{ type: "text", text: `Error: ${error.message}` }] };
-    return { content: [{ type: "text", text: JSON.stringify({ success: true, deleted: id }) }] };
+    if (error) return { content: [{ type: "text" as const, text: `Error: ${error.message}` }] };
+    return { content: [{ type: "text" as const, text: JSON.stringify({ success: true, deleted: id }) }] };
   },
 });
 
-mcpServer.tool({
-  name: "invoke_function",
+mcpServer.tool("invoke_function", {
   description: "Invoke any Supabase edge function (e.g. generate content, process automations, etc.)",
   inputSchema: {
-    type: "object",
+    type: "object" as const,
     properties: {
       function_name: { type: "string", description: "Edge function name (e.g. 'unified-content-api', 'process-automations')" },
       body: { type: "object", description: "Request body to send" },
@@ -450,44 +456,16 @@ mcpServer.tool({
         headers: {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-          "apikey": SUPABASE_ANON_KEY,
         },
         body: JSON.stringify(body || {}),
       });
       const text = await resp.text();
       let parsed;
       try { parsed = JSON.parse(text); } catch { parsed = text; }
-      return { content: [{ type: "text", text: JSON.stringify({ status: resp.status, data: parsed }, null, 2) }] };
+      return { content: [{ type: "text" as const, text: JSON.stringify({ status: resp.status, data: parsed }, null, 2) }] };
     } catch (err: any) {
-      return { content: [{ type: "text", text: `Error: ${err.message}` }] };
+      return { content: [{ type: "text" as const, text: `Error: ${err.message}` }] };
     }
-  },
-});
-
-mcpServer.tool({
-  name: "get_schema",
-  description: "Get the column names and types for a specific table",
-  inputSchema: {
-    type: "object",
-    properties: {
-      table: { type: "string", description: "Table name" },
-    },
-    required: ["table"],
-  },
-  handler: async ({ table }: any) => {
-    const sb = getAdminClient();
-    // Fetch one row to infer schema
-    const { data, error } = await sb.from(table).select("*").limit(1);
-    if (error) return { content: [{ type: "text", text: `Error: ${error.message}` }] };
-    if (!data || data.length === 0) {
-      return { content: [{ type: "text", text: `Table "${table}" exists but has no rows to infer schema from.` }] };
-    }
-    const columns = Object.entries(data[0]).map(([key, value]) => ({
-      column: key,
-      type: value === null ? "unknown" : typeof value,
-      sample: typeof value === "object" ? JSON.stringify(value)?.slice(0, 100) : String(value)?.slice(0, 100),
-    }));
-    return { content: [{ type: "text", text: JSON.stringify(columns, null, 2) }] };
   },
 });
 
@@ -496,14 +474,12 @@ mcpServer.tool({
 const app = new Hono();
 const transport = new StreamableHttpTransport();
 
-// Auth middleware - validate service role key or anon key
+// Auth middleware - validate MCP_ACCESS_TOKEN
 app.use("/*", async (c, next) => {
   const authHeader = c.req.header("Authorization") || "";
-  const apiKey = c.req.header("apikey") || "";
   const token = authHeader.replace("Bearer ", "");
 
-  // Accept service role key or anon key
-  if (token !== SUPABASE_SERVICE_ROLE_KEY && token !== SUPABASE_ANON_KEY && apiKey !== SUPABASE_SERVICE_ROLE_KEY && apiKey !== SUPABASE_ANON_KEY) {
+  if (token !== MCP_ACCESS_TOKEN) {
     return c.json({ error: "Unauthorized" }, 401);
   }
   await next();
