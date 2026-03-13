@@ -106,8 +106,9 @@ function CalendarCard({
   const isAutoPublish = canAutoPublish(platform);
   const config = statusConfig[item.status] || statusConfig.idea;
   
-  const scheduledTime = item.scheduled_at ? format(parseISO(item.scheduled_at), 'HH:mm') : null;
-  const scheduledDate = item.scheduled_at ? parseISO(item.scheduled_at) : null;
+  const effectiveDate = item.scheduled_at || item.published_at;
+  const scheduledTime = effectiveDate ? format(parseISO(effectiveDate), 'HH:mm') : null;
+  const scheduledDate = effectiveDate ? parseISO(effectiveDate) : null;
   const daysUntil = scheduledDate ? differenceInDays(scheduledDate, new Date()) : null;
   
   return (
