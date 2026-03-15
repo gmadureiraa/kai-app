@@ -192,6 +192,31 @@ export const FORBIDDEN_DECORATIVE_EMOJIS = [
 ];
 
 /**
+ * Structural AI patterns - formulaic structures that make content sound robotic
+ * These are regex patterns that detect STRUCTURE, not just phrases
+ */
+export const STRUCTURAL_AI_PATTERNS: Array<{ pattern: RegExp; name: string; description: string }> = [
+  // "Hot take:" opener
+  { pattern: /^hot take[:\s]/im, name: 'hot_take_opener', description: 'Abertura "Hot take:" é clichê de IA' },
+  // "O que X não falam/dizem" pattern
+  { pattern: /o que (?:a maioria|poucos|ninguém|founders?|marketers?|pessoas) (?:não )?(?:falam?|dizem?|contam?|sabem?)/i, name: 'what_people_dont_say', description: 'Padrão "O que X não falam" é genérico' },
+  // "Aqui está o que funciona/aprendi" 
+  { pattern: /aqui está o que (?:funciona|eu aprendi|descobri|importa)/i, name: 'here_is_what', description: 'Padrão "Aqui está o que..." é robótico' },
+  // Suspicious round numbers without source
+  { pattern: /(?:mais de |over |\+)\d{2,3}(?:\.000|\+| mil| empresas| clientes| projetos| agências| marketers| founders| builders)/i, name: 'suspicious_round_numbers', description: 'Números redondos suspeitamente inventados' },
+  // Percentage claims without source
+  { pattern: /\b(?:9[0-9]|8[5-9])%\s*(?:dos?|das?|de|of)\s*(?:founders?|empresas|marketers?|builders?|projetos|pessoas)/i, name: 'suspicious_percentages', description: 'Percentuais altos sem fonte são provavelmente inventados' },
+  // "X vs Y" contrast list pattern (bullet-based)
+  { pattern: /(?:fazem|faz)\s+X[\s\S]*?(?:não fazem|não faz)\s+Y/i, name: 'contrast_list', description: 'Padrão de lista de contrastes "fazem X / não fazem Y"' },
+  // Opening with "[Person] fez/criou/construiu [impressive thing]"
+  { pattern: /^(?:um |uma |o |a )?(?:founder|ceo|empreendedor|criador|desenvolvedor)\s+(?:que |de \d+)\s/im, name: 'person_achievement_opener', description: 'Abertura "Um founder que fez X" é genérica' },
+  // "A verdade é que..." / "A realidade é que..."
+  { pattern: /^(?:a verdade|a realidade|o fato)\s+é\s+que/im, name: 'truth_is_opener', description: 'Abertura "A verdade é que..." é clichê' },
+  // "Unpopular opinion:" opener
+  { pattern: /^unpopular opinion[:\s]/im, name: 'unpopular_opinion', description: 'Abertura "Unpopular opinion:" é clichê de IA' },
+];
+
+/**
  * Patterns that indicate meta-text (AI talking about the content instead of delivering it)
  */
 export const META_TEXT_PATTERNS = [
