@@ -8,7 +8,52 @@ import {
 } from "../_shared/format-constants.ts";
 import { getFullContentContext, getStructuredVoice } from "../_shared/knowledge-loader.ts";
 import { buildImageBriefing } from "../_shared/prompt-builder.ts";
-import { detectContentStructure } from "../_shared/quality-rules.ts";
+import { detectContentStructure, detectOpeningPatterns } from "../_shared/quality-rules.ts";
+
+// =====================================================
+// HELPER: Random rotation with cooldown
+// =====================================================
+function selectVariationWithCooldown(
+  categories: Array<{ name: string; instruction: string }>,
+  triggerConfig: any,
+): { index: number; variation: { name: string; instruction: string }; updatedRecentIndices: number[] } {
+  const recentIndices: number[] = triggerConfig.recent_variation_indices || [];
+  
+  // Build list of available indices (exclude recently used)
+  let available = Array.from({ length: categories.length }, (_, i) => i)
+    .filter(i => !recentIndices.includes(i));
+  
+  // If all are exhausted, reset cooldown
+  if (available.length === 0) {
+    available = Array.from({ length: categories.length }, (_, i) => i);
+  }
+  
+  // Random selection from available
+  const selectedIndex = available[Math.floor(Math.random() * available.length)];
+  
+  // Update cooldown (keep last 3)
+  const updatedRecentIndices = [...recentIndices, selectedIndex].slice(-3);
+  
+  return {
+    index: selectedIndex,
+    variation: categories[selectedIndex],
+    updatedRecentIndices,
+  };
+}
+
+// =====================================================
+// HELPER: Content length variation modifier
+// =====================================================
+function getLengthModifier(): string {
+  const rand = Math.random();
+  if (rand < 0.3) {
+    return '\n\n📏 COMPRIMENTO: BREVE. Máximo 2 frases. Brevidade é poder. Diga o essencial e pare.';
+  } else if (rand < 0.7) {
+    return ''; // normal — no modifier
+  } else {
+    return '\n\n📏 COMPRIMENTO: DETALHADO. Desenvolva com 4-5 frases. Use detalhes concretos, exemplos específicos.';
+  }
+}
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
