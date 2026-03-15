@@ -695,7 +695,7 @@ ${variationContext.instruction}`;
     if (variationContext.recentTweets.length > 0) {
       prompt += `\n\n🚫 ANTI-EXEMPLOS (NÃO repita estes padrões, estruturas ou frases similares):`;
       variationContext.recentTweets.forEach((tweet, i) => {
-        prompt += `\n${i + 1}. "${tweet}"`;
+        prompt += `\n${i + 1}. "${tweet.substring(0, 300)}"`;
       });
       
       // Detect structural patterns from recent posts
@@ -717,6 +717,16 @@ ${variationContext.instruction}`;
           prompt += `\n- ${pattern} (${count}x)`;
         }
         prompt += `\n\n⚠️ USE UM PADRÃO ESTRUTURAL COMPLETAMENTE DIFERENTE dos listados acima.`;
+      }
+      
+      // Detect opening hook patterns
+      const openingPatterns = detectOpeningPatterns(variationContext.recentTweets);
+      if (openingPatterns.length > 0) {
+        prompt += `\n\n🎣 GANCHOS DE ABERTURA JÁ USADOS (NÃO repita o mesmo tipo):`;
+        for (const { pattern, count, examples } of openingPatterns) {
+          prompt += `\n- ${pattern} (${count}x): "${examples[0]}"`;
+        }
+        prompt += `\n\n⚠️ COMECE com um tipo de abertura DIFERENTE dos listados acima.`;
       }
       
       prompt += `\n\n⚠️ Seu conteúdo DEVE ser fundamentalmente DIFERENTE dos exemplos acima em estrutura, tema e abordagem.`;
