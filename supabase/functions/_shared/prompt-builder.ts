@@ -187,7 +187,7 @@ export async function buildWriterSystemPrompt(params: PromptBuilderParams): Prom
     if (variationContext.recentPosts.length > 0) {
       variationBlock += `\n### 🚫 ANTI-EXEMPLOS (NÃO repita estes padrões):\n`;
       variationContext.recentPosts.forEach((post, i) => {
-        variationBlock += `${i + 1}. "${post.substring(0, 200)}"\n`;
+        variationBlock += `${i + 1}. "${post.substring(0, 300)}"\n`;
       });
       variationBlock += `\n⚠️ Seu conteúdo DEVE ser fundamentalmente DIFERENTE dos exemplos acima.\n`;
     }
