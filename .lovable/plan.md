@@ -1,59 +1,56 @@
 
 
-# Plano: Expandir MCP Reader com Upload de Arquivos e Novos Recursos
+## Diagnóstico: Por que as automações não estão postando
 
-## Estado Atual
+### Problema 1: LinkedIn - Itens criados mas nunca publicados
+As 3 automações de LinkedIn (Artigo de Opinião, Building in Public, Case & Prova Social) estão **funcionando corretamente** na geração de conteúdo e imagens. O problema é que todas estão com `auto_publish: false`. Os itens são criados com status "idea" no planejamento e ficam lá esperando publicação manual. Nenhum deles jamais é publicado automaticamente.
 
-O `mcp-reader` tem 17 tools (list_tables, query_table, get_client, get_content_library, get_references, get_metrics, get_automations, get_planning, search_knowledge, get_schema, create_planning_item, update_planning_item, update_automation, insert_row, update_row, delete_row, invoke_function). Nenhuma lida com storage/arquivos.
+### Problema 2: Threads - Nenhuma automação configurada
+As credenciais do Threads (conta `madureira0x`) estão válidas, mas **não existe nenhuma automação** direcionada ao Threads.
 
-O projeto usa o bucket `client-files` para arquivos. Não há buckets explícitos criados em migrations visíveis, mas o código referencia `client-files` e `chat-images`.
+### Problema 3: Bug no retry de imagem
+No `process-automations`, linha ~1322, o retry de geração de imagem referencia a variável `resolvedImagePrompt` que **não existe** no escopo (o nome correto é `fullImagePrompt`). Isso faz o retry falhar silenciosamente.
 
----
-
-## Novas Tools a Adicionar (8 tools)
-
-### Storage / Arquivos
-
-1. **`upload_file`** — Upload de arquivo via URL ou base64 para qualquer bucket (client-files, chat-images, etc.). Retorna URL pública permanente.
-   - Params: `bucket`, `path`, `file_url` (baixa e sobe) OU `base64` + `content_type`
-   - Suporta imagens, PDFs, vídeos, qualquer tipo
-
-2. **`list_files`** — Lista arquivos de um bucket/pasta
-   - Params: `bucket`, `folder` (optional), `limit`
-
-3. **`delete_file`** — Remove arquivo de um bucket
-   - Params: `bucket`, `path`
-
-4. **`get_file_url`** — Retorna URL pública de um arquivo
-   - Params: `bucket`, `path`
-
-### Conteúdo / IA
-
-5. **`generate_content`** — Gera conteúdo via `unified-content-api` de forma simplificada (wrapper com params tipados em vez de chamar invoke_function genérico)
-   - Params: `client_id`, `format`, `topic`, `additional_instructions`
-
-6. **`analyze_url`** — Extrai conteúdo de uma URL via `firecrawl-scrape`
-   - Params: `url`
-
-### Gestão de Clientes
-
-7. **`update_client`** — Atualiza campos do cliente (voice_profile, identity_guide, description, etc.)
-   - Params: `client_id`, `updates`
-
-8. **`list_clients`** — Lista todos os clientes de um workspace
-   - Params: `workspace_id`
+### Problema 4: Qualidade do conteúdo LinkedIn repetitivo
+Os posts gerados para LinkedIn estão todos girando em torno do mesmo tema ("clareza vs complexidade em Web3"). Falta diversidade temática e o sistema de variação (que existe para tweets) não está implementado para LinkedIn.
 
 ---
 
-## Arquivo a Modificar
+## Plano de Implementação
 
-- **`supabase/functions/mcp-reader/index.ts`** — Adicionar as 8 tools novas após as existentes, antes do HTTP transport setup (linha 472)
+### 1. Corrigir bug do retry de imagem no process-automations
+- Substituir `resolvedImagePrompt` por `fullImagePrompt` na linha do retry
 
-## Detalhes de Implementação
+### 2. Criar sistema de variação para LinkedIn (anti-repetição)
+Adicionar categorias editoriais para LinkedIn similares ao `GM_VARIATION_CATEGORIES` dos tweets:
+- **Artigo de Opinião**: Análise contrarian de tendência, dados concretos, framework próprio
+- **Building in Public**: Bastidores reais, números, aprendizados honestos, erros
+- **Case & Prova Social**: Resultados de clientes, métricas antes/depois, processo
 
-- `upload_file` com URL: faz `fetch(url)` → `arrayBuffer()` → `sb.storage.from(bucket).upload(path, buffer, { contentType })`
-- `upload_file` com base64: decodifica → mesmo fluxo
-- `generate_content` chama `unified-content-api` internamente com os headers corretos
-- `analyze_url` chama `firecrawl-scrape` internamente
-- Todos retornam JSON estruturado como as tools existentes
+Cada automação LinkedIn receberá um `variation_index` rotativo com sub-temas específicos para evitar repetição.
+
+### 3. Melhorar prompts LinkedIn com estratégia de conteúdo
+Enriquecer os prompts usando o guia de conteúdo do Madureira (`public/clients/madureira/guia-conteudo.md`):
+- Incorporar os 5 pilares de conteúdo como rotação temática
+- Usar tom de voz definido: técnico mas didático, direto, visionário
+- Adicionar instruções de formatação específicas para LinkedIn (quebras de linha, storytelling, CTA)
+
+### 4. Habilitar auto_publish para LinkedIn (com revisão inteligente)
+Alterar as 3 automações de LinkedIn para `auto_publish: true` para que os posts sejam publicados automaticamente após geração.
+
+### 5. Criar automações para Threads
+Criar 2-3 automações de Threads para o perfil Madureira:
+- **Threads Diário** (daily): Repurpose do melhor tweet do dia ou insight rápido
+- **Threads Semanal** (weekly): Versão expandida de um tweet de alta performance
+
+### 6. Melhorar geração de imagem para LinkedIn
+- Ajustar o aspect ratio para LinkedIn: `1.91:1` (landscape) em vez de `1:1`
+- Enriquecer prompts de imagem com contexto profissional/corporativo
+- Usar modelo `google/gemini-3-pro-image-preview` para maior qualidade nas imagens de LinkedIn
+
+---
+
+### Arquivos a modificar
+1. `supabase/functions/process-automations/index.ts` - Fix retry bug, adicionar variação LinkedIn, melhorar prompts
+2. Database: Atualizar `planning_automations` para habilitar auto_publish nas automações LinkedIn e criar novas automações Threads
 
