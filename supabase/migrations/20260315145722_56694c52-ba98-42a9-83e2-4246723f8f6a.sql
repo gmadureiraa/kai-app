@@ -1,0 +1,1 @@
+UPDATE planning_automations SET client_id = 'c3fdf44d-1eb5-49f0-aa91-a030642b5396', updated_at = now() WHERE id = 'b1d77876-3e7e-4d9b-bca0-c6568b6bfcb5';

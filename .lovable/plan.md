@@ -1,62 +1,56 @@
 
 
-# Plano: Automação Diária de Dicas do Claude com Screenshots Reais
+## Diagnóstico: Por que as automações não estão postando
 
-## Conceito
+### Problema 1: LinkedIn - Itens criados mas nunca publicados
+As 3 automações de LinkedIn (Artigo de Opinião, Building in Public, Case & Prova Social) estão **funcionando corretamente** na geração de conteúdo e imagens. O problema é que todas estão com `auto_publish: false`. Os itens são criados com status "idea" no planejamento e ficam lá esperando publicação manual. Nenhum deles jamais é publicado automaticamente.
 
-Uma automação diária para o cliente **Kaleidos** (`6fe608ae-b7ab-4c87-8600-50d7d42785b0`) que posta dicas/skills do Claude com prints reais (não gerados por IA). A automação gera o texto com IA e seleciona uma imagem aleatória de um pool de screenshots pré-carregados no storage.
+### Problema 2: Threads - Nenhuma automação configurada
+As credenciais do Threads (conta `madureira0x`) estão válidas, mas **não existe nenhuma automação** direcionada ao Threads.
 
-## Implementação
+### Problema 3: Bug no retry de imagem
+No `process-automations`, linha ~1322, o retry de geração de imagem referencia a variável `resolvedImagePrompt` que **não existe** no escopo (o nome correto é `fullImagePrompt`). Isso faz o retry falhar silenciosamente.
 
-### 1. Criar bucket/pasta para screenshots
+### Problema 4: Qualidade do conteúdo LinkedIn repetitivo
+Os posts gerados para LinkedIn estão todos girando em torno do mesmo tema ("clareza vs complexidade em Web3"). Falta diversidade temática e o sistema de variação (que existe para tweets) não está implementado para LinkedIn.
 
-Usar a pasta `client-files/kaleidos/claude-tips/` no storage existente. Os screenshots serão carregados via MCP (`upload_file`) ou manualmente. A automação listará os arquivos dessa pasta e escolherá um aleatório que ainda não foi usado recentemente.
+---
 
-### 2. Lógica no `process-automations/index.ts`
+## Plano de Implementação
 
-Adicionar um handler especial para automações com `metadata.image_pool_folder` no `trigger_config`. Quando presente:
+### 1. Corrigir bug do retry de imagem no process-automations
+- Substituir `resolvedImagePrompt` por `fullImagePrompt` na linha do retry
 
-- Lista arquivos do storage na pasta configurada
-- Consulta os últimos N `planning_items` dessa automação para ver quais imagens já foram usadas (`media_urls`)
-- Filtra as já usadas e seleciona uma aleatória das restantes
-- Se todas já foram usadas, reseta o ciclo
-- Injeta a URL pública no `media_urls` do item criado
-- **Pula** a geração de imagem por IA (mesmo que `auto_generate_image` esteja false)
+### 2. Criar sistema de variação para LinkedIn (anti-repetição)
+Adicionar categorias editoriais para LinkedIn similares ao `GM_VARIATION_CATEGORIES` dos tweets:
+- **Artigo de Opinião**: Análise contrarian de tendência, dados concretos, framework próprio
+- **Building in Public**: Bastidores reais, números, aprendizados honestos, erros
+- **Case & Prova Social**: Resultados de clientes, métricas antes/depois, processo
 
-### 3. Criar o registro da automação (migration)
+Cada automação LinkedIn receberá um `variation_index` rotativo com sub-temas específicos para evitar repetição.
 
-```sql
-INSERT INTO planning_automations (
-  workspace_id, client_id, name, is_active, trigger_type, trigger_config,
-  platform, platforms, content_type, auto_generate_content, prompt_template,
-  auto_publish, auto_generate_image, created_by
-) VALUES (
-  'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
-  '6fe608ae-b7ab-4c87-8600-50d7d42785b0',
-  'Dica do Claude — Daily',
-  true, 'schedule',
-  '{"type":"daily","time":"10:00"}',
-  'twitter', '["twitter"]', 'tweet', true,
-  '<template com instruções de tom e contexto>',
-  true, false,
-  '9381b916-b87e-4bd2-a1e7-e06791854c4c'
-);
-```
+### 3. Melhorar prompts LinkedIn com estratégia de conteúdo
+Enriquecer os prompts usando o guia de conteúdo do Madureira (`public/clients/madureira/guia-conteudo.md`):
+- Incorporar os 5 pilares de conteúdo como rotação temática
+- Usar tom de voz definido: técnico mas didático, direto, visionário
+- Adicionar instruções de formatação específicas para LinkedIn (quebras de linha, storytelling, CTA)
 
-O `prompt_template` instruirá a IA a:
-- Escrever uma dica prática sobre Claude/Claude Code
-- Tom: direto, útil, sem sensacionalismo
-- Referir ao print que será anexado ("como no print" / "veja no print")
-- Variações: shortcuts, prompts, workflows, debugging, CLAUDE.md tips
+### 4. Habilitar auto_publish para LinkedIn (com revisão inteligente)
+Alterar as 3 automações de LinkedIn para `auto_publish: true` para que os posts sejam publicados automaticamente após geração.
 
-O `trigger_config` terá `image_pool_folder: "kaleidos/claude-tips"` para o handler saber de onde pegar as imagens.
+### 5. Criar automações para Threads
+Criar 2-3 automações de Threads para o perfil Madureira:
+- **Threads Diário** (daily): Repurpose do melhor tweet do dia ou insight rápido
+- **Threads Semanal** (weekly): Versão expandida de um tweet de alta performance
 
-### 4. Arquivo a modificar
+### 6. Melhorar geração de imagem para LinkedIn
+- Ajustar o aspect ratio para LinkedIn: `1.91:1` (landscape) em vez de `1:1`
+- Enriquecer prompts de imagem com contexto profissional/corporativo
+- Usar modelo `google/gemini-3-pro-image-preview` para maior qualidade nas imagens de LinkedIn
 
-- **`supabase/functions/process-automations/index.ts`** — Adicionar lógica de "image pool" que lista storage e seleciona screenshot aleatório não-repetido, executada antes da geração de conteúdo para que o prompt saiba qual imagem será anexada
-- **Database migration** — INSERT da automação + prompt template
+---
 
-### 5. Upload dos screenshots
-
-Após a automação estar criada, os prints serão carregados na pasta `client-files/kaleidos/claude-tips/` via MCP `upload_file` ou pelo chat. Quanto mais prints no pool, mais dias sem repetição.
+### Arquivos a modificar
+1. `supabase/functions/process-automations/index.ts` - Fix retry bug, adicionar variação LinkedIn, melhorar prompts
+2. Database: Atualizar `planning_automations` para habilitar auto_publish nas automações LinkedIn e criar novas automações Threads
 
