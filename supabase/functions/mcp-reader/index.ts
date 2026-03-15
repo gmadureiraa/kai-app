@@ -469,6 +469,223 @@ mcpServer.tool("invoke_function", {
   },
 });
 
+// ---------- STORAGE TOOLS ----------
+
+mcpServer.tool("upload_file", {
+  description: "Upload a file to storage via URL or base64. Returns permanent public URL.",
+  inputSchema: {
+    type: "object" as const,
+    properties: {
+      bucket: { type: "string", description: "Storage bucket name (e.g. client-files, chat-images)" },
+      path: { type: "string", description: "File path inside the bucket (e.g. client-id/photo.jpg)" },
+      file_url: { type: "string", description: "URL to download and upload (use this OR base64)" },
+      base64: { type: "string", description: "Base64-encoded file content (use this OR file_url)" },
+      content_type: { type: "string", description: "MIME type (e.g. image/png, video/mp4). Required for base64, auto-detected for URL." },
+    },
+    required: ["bucket", "path"],
+  },
+  handler: async ({ bucket, path, file_url, base64, content_type }: any) => {
+    try {
+      const sb = getAdminClient();
+      let buffer: ArrayBuffer;
+      let mime = content_type || "application/octet-stream";
+
+      if (file_url) {
+        const resp = await fetch(file_url);
+        if (!resp.ok) return { content: [{ type: "text" as const, text: `Error: Failed to fetch URL (${resp.status})` }] };
+        buffer = await resp.arrayBuffer();
+        if (!content_type && resp.headers.get("content-type")) {
+          mime = resp.headers.get("content-type")!.split(";")[0];
+        }
+      } else if (base64) {
+        const raw = atob(base64);
+        const arr = new Uint8Array(raw.length);
+        for (let i = 0; i < raw.length; i++) arr[i] = raw.charCodeAt(i);
+        buffer = arr.buffer;
+      } else {
+        return { content: [{ type: "text" as const, text: "Error: Provide either file_url or base64" }] };
+      }
+
+      const { error } = await sb.storage.from(bucket).upload(path, buffer, {
+        contentType: mime,
+        upsert: true,
+      });
+      if (error) return { content: [{ type: "text" as const, text: `Error: ${error.message}` }] };
+
+      const { data: urlData } = sb.storage.from(bucket).getPublicUrl(path);
+      return { content: [{ type: "text" as const, text: JSON.stringify({ success: true, public_url: urlData.publicUrl, bucket, path, content_type: mime }, null, 2) }] };
+    } catch (err: any) {
+      return { content: [{ type: "text" as const, text: `Error: ${err.message}` }] };
+    }
+  },
+});
+
+mcpServer.tool("list_files", {
+  description: "List files in a storage bucket/folder",
+  inputSchema: {
+    type: "object" as const,
+    properties: {
+      bucket: { type: "string" },
+      folder: { type: "string", description: "Folder path (optional)" },
+      limit: { type: "number", description: "Max files to return (default: 100)" },
+    },
+    required: ["bucket"],
+  },
+  handler: async ({ bucket, folder, limit }: any) => {
+    const sb = getAdminClient();
+    const { data, error } = await sb.storage.from(bucket).list(folder || "", { limit: limit || 100 });
+    if (error) return { content: [{ type: "text" as const, text: `Error: ${error.message}` }] };
+    return { content: [{ type: "text" as const, text: JSON.stringify({ count: data?.length, files: data }, null, 2) }] };
+  },
+});
+
+mcpServer.tool("delete_file", {
+  description: "Delete a file from storage",
+  inputSchema: {
+    type: "object" as const,
+    properties: {
+      bucket: { type: "string" },
+      path: { type: "string", description: "File path (or array of paths)" },
+    },
+    required: ["bucket", "path"],
+  },
+  handler: async ({ bucket, path }: any) => {
+    const sb = getAdminClient();
+    const paths = Array.isArray(path) ? path : [path];
+    const { error } = await sb.storage.from(bucket).remove(paths);
+    if (error) return { content: [{ type: "text" as const, text: `Error: ${error.message}` }] };
+    return { content: [{ type: "text" as const, text: JSON.stringify({ success: true, deleted: paths }) }] };
+  },
+});
+
+mcpServer.tool("get_file_url", {
+  description: "Get the permanent public URL for a file in storage",
+  inputSchema: {
+    type: "object" as const,
+    properties: {
+      bucket: { type: "string" },
+      path: { type: "string" },
+    },
+    required: ["bucket", "path"],
+  },
+  handler: async ({ bucket, path }: any) => {
+    const sb = getAdminClient();
+    const { data } = sb.storage.from(bucket).getPublicUrl(path);
+    return { content: [{ type: "text" as const, text: JSON.stringify({ public_url: data.publicUrl }) }] };
+  },
+});
+
+// ---------- CONTENT / AI TOOLS ----------
+
+mcpServer.tool("generate_content", {
+  description: "Generate content using the unified content API. Wrapper with typed params for easier use.",
+  inputSchema: {
+    type: "object" as const,
+    properties: {
+      client_id: { type: "string", description: "Client UUID" },
+      format: { type: "string", description: "Content format: tweet, thread, linkedin_post, instagram_caption, newsletter, article, etc." },
+      topic: { type: "string", description: "Topic or title for the content" },
+      additional_instructions: { type: "string", description: "Extra instructions for generation" },
+      reference_urls: { type: "array", items: { type: "string" }, description: "URLs to use as reference" },
+    },
+    required: ["client_id", "format", "topic"],
+  },
+  handler: async ({ client_id, format, topic, additional_instructions, reference_urls }: any) => {
+    try {
+      const body: any = {
+        action: "generate",
+        clientId: client_id,
+        format,
+        title: topic,
+      };
+      if (additional_instructions) body.additionalInstructions = additional_instructions;
+      if (reference_urls) body.referenceUrls = reference_urls;
+
+      const resp = await fetch(`${SUPABASE_URL}/functions/v1/unified-content-api`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+        },
+        body: JSON.stringify(body),
+      });
+      const data = await resp.text();
+      let parsed;
+      try { parsed = JSON.parse(data); } catch { parsed = data; }
+      return { content: [{ type: "text" as const, text: JSON.stringify({ status: resp.status, data: parsed }, null, 2) }] };
+    } catch (err: any) {
+      return { content: [{ type: "text" as const, text: `Error: ${err.message}` }] };
+    }
+  },
+});
+
+mcpServer.tool("analyze_url", {
+  description: "Extract content from a URL using Firecrawl scraping. Returns markdown content.",
+  inputSchema: {
+    type: "object" as const,
+    properties: {
+      url: { type: "string", description: "URL to scrape and analyze" },
+      formats: { type: "array", items: { type: "string" }, description: "Output formats: markdown, html, links, screenshot (default: markdown)" },
+    },
+    required: ["url"],
+  },
+  handler: async ({ url, formats }: any) => {
+    try {
+      const resp = await fetch(`${SUPABASE_URL}/functions/v1/firecrawl-scrape`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+        },
+        body: JSON.stringify({ url, options: { formats: formats || ["markdown"] } }),
+      });
+      const data = await resp.text();
+      let parsed;
+      try { parsed = JSON.parse(data); } catch { parsed = data; }
+      return { content: [{ type: "text" as const, text: JSON.stringify({ status: resp.status, data: parsed }, null, 2) }] };
+    } catch (err: any) {
+      return { content: [{ type: "text" as const, text: `Error: ${err.message}` }] };
+    }
+  },
+});
+
+// ---------- CLIENT MANAGEMENT TOOLS ----------
+
+mcpServer.tool("update_client", {
+  description: "Update client fields (voice_profile, identity_guide, description, content_guidelines, context_notes, etc.)",
+  inputSchema: {
+    type: "object" as const,
+    properties: {
+      client_id: { type: "string", description: "Client UUID" },
+      updates: { type: "object", description: "Fields to update (any columns from clients table)" },
+    },
+    required: ["client_id", "updates"],
+  },
+  handler: async ({ client_id, updates }: any) => {
+    const sb = getAdminClient();
+    const { data, error } = await sb.from("clients").update(updates).eq("id", client_id).select().single();
+    if (error) return { content: [{ type: "text" as const, text: `Error: ${error.message}` }] };
+    return { content: [{ type: "text" as const, text: JSON.stringify({ success: true, client: data }, null, 2) }] };
+  },
+});
+
+mcpServer.tool("list_clients", {
+  description: "List all clients in a workspace",
+  inputSchema: {
+    type: "object" as const,
+    properties: {
+      workspace_id: { type: "string", description: "Workspace UUID" },
+    },
+    required: ["workspace_id"],
+  },
+  handler: async ({ workspace_id }: any) => {
+    const sb = getAdminClient();
+    const { data, error } = await sb.from("clients").select("id, name, description, avatar_url, created_at").eq("workspace_id", workspace_id).order("name");
+    if (error) return { content: [{ type: "text" as const, text: `Error: ${error.message}` }] };
+    return { content: [{ type: "text" as const, text: JSON.stringify({ count: data?.length, clients: data }, null, 2) }] };
+  },
+});
+
 // ============ HTTP Transport ============
 
 const app = new Hono();
