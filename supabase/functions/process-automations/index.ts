@@ -1247,12 +1247,11 @@ serve(async (req) => {
             let variationContext: { category: string; instruction: string; recentTweets: string[] } | undefined;
             
             if (automation.content_type === 'tweet') {
-              // Get variation index and rotate
+              // Random rotation with cooldown instead of sequential
               const triggerConfig = automation.trigger_config as any;
-              const variationIndex = (triggerConfig.variation_index || 0) % GM_VARIATION_CATEGORIES.length;
-              const variation = GM_VARIATION_CATEGORIES[variationIndex];
+              const { index: variationIndex, variation, updatedRecentIndices } = selectVariationWithCooldown(GM_VARIATION_CATEGORIES, triggerConfig);
               
-              // Fetch recent tweets as anti-examples
+              // Fetch recent tweets as anti-examples (increased to 12)
               let recentTweets: string[] = [];
               try {
                 const { data: recentPosts } = await supabase
@@ -1261,7 +1260,7 @@ serve(async (req) => {
                   .eq('client_id', automation.client_id!)
                   .not('content', 'is', null)
                   .order('posted_at', { ascending: false })
-                  .limit(7);
+                  .limit(12);
                 
                 if (recentPosts) {
                   recentTweets = recentPosts.map(p => p.content!).filter(Boolean);
@@ -1270,24 +1269,28 @@ serve(async (req) => {
                 console.warn('Could not fetch recent tweets for anti-examples:', e);
               }
               
+              // Add length modifier
+              const lengthMod = getLengthModifier();
+              
               variationContext = {
                 category: variation.name,
-                instruction: variation.instruction,
+                instruction: variation.instruction + lengthMod,
                 recentTweets,
               };
               
-              // Increment variation index
+              // Update with random cooldown indices
               await supabase
                 .from('planning_automations')
                 .update({
                   trigger_config: {
                     ...automation.trigger_config,
                     variation_index: variationIndex + 1,
+                    recent_variation_indices: updatedRecentIndices,
                   }
                 })
                 .eq('id', automation.id);
               
-              console.log(`Variation: ${variation.name} (index ${variationIndex}), ${recentTweets.length} anti-examples`);
+              console.log(`Variation: ${variation.name} (random index ${variationIndex}, cooldown: [${updatedRecentIndices}]), ${recentTweets.length} anti-examples`);
             }
             
             // LinkedIn editorial variation system
