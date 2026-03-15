@@ -1,56 +1,45 @@
 
 
-## Diagnóstico: Por que as automações não estão postando
+# Plano: Humanizar BTC, GM Madureira e GM Defiverso
 
-### Problema 1: LinkedIn - Itens criados mas nunca publicados
-As 3 automações de LinkedIn (Artigo de Opinião, Building in Public, Case & Prova Social) estão **funcionando corretamente** na geração de conteúdo e imagens. O problema é que todas estão com `auto_publish: false`. Os itens são criados com status "idea" no planejamento e ficam lá esperando publicação manual. Nenhum deles jamais é publicado automaticamente.
+## Problemas Concretos Detectados nos Últimos Posts
 
-### Problema 2: Threads - Nenhuma automação configurada
-As credenciais do Threads (conta `madureira0x`) estão válidas, mas **não existe nenhuma automação** direcionada ao Threads.
+**BTC (Jornal Cripto)** — IA ignora o template e volta aos vícios:
+- "Bitcoin dispara!" / "Bitcoin em queda!" (sensacionalismo proibido)
+- "O que isso significa para o mercado?" (filler genérico)
+- "Siga para não perder" / "acesse jornalcripto.com" (CTAs e links proibidos)
+- "Será que o Bitcoin vai disparar?" (clickbait)
 
-### Problema 3: Bug no retry de imagem
-No `process-automations`, linha ~1322, o retry de geração de imagem referencia a variável `resolvedImagePrompt` que **não existe** no escopo (o nome correto é `fullImagePrompt`). Isso faz o retry falhar silenciosamente.
+**GM Madureira** — Desvios do objetivo:
+- "Cripto tá premiando inovação real" (virou insight/guru, não é GM)
+- "O Bitcoin subiu 1.5%" (mistura preço BTC no GM, foge do propósito)
+- Template atual é bom mas precisa ser mais rígido nas proibições
 
-### Problema 4: Qualidade do conteúdo LinkedIn repetitivo
-Os posts gerados para LinkedIn estão todos girando em torno do mesmo tema ("clareza vs complexidade em Web3"). Falta diversidade temática e o sistema de variação (que existe para tweets) não está implementado para LinkedIn.
-
----
-
-## Plano de Implementação
-
-### 1. Corrigir bug do retry de imagem no process-automations
-- Substituir `resolvedImagePrompt` por `fullImagePrompt` na linha do retry
-
-### 2. Criar sistema de variação para LinkedIn (anti-repetição)
-Adicionar categorias editoriais para LinkedIn similares ao `GM_VARIATION_CATEGORIES` dos tweets:
-- **Artigo de Opinião**: Análise contrarian de tendência, dados concretos, framework próprio
-- **Building in Public**: Bastidores reais, números, aprendizados honestos, erros
-- **Case & Prova Social**: Resultados de clientes, métricas antes/depois, processo
-
-Cada automação LinkedIn receberá um `variation_index` rotativo com sub-temas específicos para evitar repetição.
-
-### 3. Melhorar prompts LinkedIn com estratégia de conteúdo
-Enriquecer os prompts usando o guia de conteúdo do Madureira (`public/clients/madureira/guia-conteudo.md`):
-- Incorporar os 5 pilares de conteúdo como rotação temática
-- Usar tom de voz definido: técnico mas didático, direto, visionário
-- Adicionar instruções de formatação específicas para LinkedIn (quebras de linha, storytelling, CTA)
-
-### 4. Habilitar auto_publish para LinkedIn (com revisão inteligente)
-Alterar as 3 automações de LinkedIn para `auto_publish: true` para que os posts sejam publicados automaticamente após geração.
-
-### 5. Criar automações para Threads
-Criar 2-3 automações de Threads para o perfil Madureira:
-- **Threads Diário** (daily): Repurpose do melhor tweet do dia ou insight rápido
-- **Threads Semanal** (weekly): Versão expandida de um tweet de alta performance
-
-### 6. Melhorar geração de imagem para LinkedIn
-- Ajustar o aspect ratio para LinkedIn: `1.91:1` (landscape) em vez de `1:1`
-- Enriquecer prompts de imagem com contexto profissional/corporativo
-- Usar modelo `google/gemini-3-pro-image-preview` para maior qualidade nas imagens de LinkedIn
+**GM Defiverso** — Fora das specs:
+- Posts com 200+ chars (limite é 180)
+- "Fato: a descentralização é o futuro" (genérico/guru)
+- "Quase 50% dos investidores nunca venderam" (dado inventado)
+- Falta a personalidade alienígena/espacial da marca
 
 ---
 
-### Arquivos a modificar
-1. `supabase/functions/process-automations/index.ts` - Fix retry bug, adicionar variação LinkedIn, melhorar prompts
-2. Database: Atualizar `planning_automations` para habilitar auto_publish nas automações LinkedIn e criar novas automações Threads
+## Ação: Reescrever os 5 Templates via Migration
+
+### 1. BTC Manhã — Reforçar anti-sensacionalismo
+Adicionar proibições explícitas inline: "NUNCA use 'dispara', 'despenca', 'será que vai'. NUNCA faça perguntas retóricas. NUNCA adicione CTAs." Exemplo mais seco e factual.
+
+### 2. BTC Tarde — Mesmo reforço
+Proibir "O que isso significa?", links, CTAs. Manter tom contextual.
+
+### 3. BTC Noite — Mesmo reforço
+Proibir "Para análises completas", links. Manter tom analítico de fechamento.
+
+### 4. GM Madureira — Blindar contra desvios
+Adicionar: "PROIBIDO falar de preço de Bitcoin, insight de mercado, ou qualquer conteúdo educacional. O GM é SOCIAL, não informativo." Mais exemplos de variação (música, café, rotina).
+
+### 5. GM Defiverso — Respeitar limite + personalidade
+Reforçar 180 chars max com "CONTE os caracteres". Proibir dados inventados. Adicionar exemplos com personalidade alien/space. Proibir tom de professor.
+
+### Arquivos
+- **Database migration** — UPDATE nos 5 `prompt_template` das automações
 
