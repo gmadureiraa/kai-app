@@ -652,7 +652,29 @@ ${variationContext.instruction}`;
       variationContext.recentTweets.forEach((tweet, i) => {
         prompt += `\n${i + 1}. "${tweet}"`;
       });
-      prompt += `\n\n⚠️ Seu tweet DEVE ser fundamentalmente DIFERENTE dos exemplos acima em estrutura, tema e abordagem.`;
+      
+      // Detect structural patterns from recent posts
+      const allStructures: Record<string, number> = {};
+      for (const tweet of variationContext.recentTweets) {
+        const patterns = detectContentStructure(tweet);
+        for (const p of patterns) {
+          allStructures[p] = (allStructures[p] || 0) + 1;
+        }
+      }
+      
+      const frequentPatterns = Object.entries(allStructures)
+        .filter(([_, count]) => count >= 2)
+        .sort((a, b) => b[1] - a[1]);
+      
+      if (frequentPatterns.length > 0) {
+        prompt += `\n\n📊 PADRÕES ESTRUTURAIS JÁ USADOS RECENTEMENTE (NÃO repita):`;
+        for (const [pattern, count] of frequentPatterns) {
+          prompt += `\n- ${pattern} (${count}x)`;
+        }
+        prompt += `\n\n⚠️ USE UM PADRÃO ESTRUTURAL COMPLETAMENTE DIFERENTE dos listados acima.`;
+      }
+      
+      prompt += `\n\n⚠️ Seu conteúdo DEVE ser fundamentalmente DIFERENTE dos exemplos acima em estrutura, tema e abordagem.`;
     }
   }
   
