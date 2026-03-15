@@ -1,45 +1,59 @@
 
 
-# Plano: Humanizar BTC, GM Madureira e GM Defiverso
+# Plano: Expandir MCP Reader com Upload de Arquivos e Novos Recursos
 
-## Problemas Concretos Detectados nos Últimos Posts
+## Estado Atual
 
-**BTC (Jornal Cripto)** — IA ignora o template e volta aos vícios:
-- "Bitcoin dispara!" / "Bitcoin em queda!" (sensacionalismo proibido)
-- "O que isso significa para o mercado?" (filler genérico)
-- "Siga para não perder" / "acesse jornalcripto.com" (CTAs e links proibidos)
-- "Será que o Bitcoin vai disparar?" (clickbait)
+O `mcp-reader` tem 17 tools (list_tables, query_table, get_client, get_content_library, get_references, get_metrics, get_automations, get_planning, search_knowledge, get_schema, create_planning_item, update_planning_item, update_automation, insert_row, update_row, delete_row, invoke_function). Nenhuma lida com storage/arquivos.
 
-**GM Madureira** — Desvios do objetivo:
-- "Cripto tá premiando inovação real" (virou insight/guru, não é GM)
-- "O Bitcoin subiu 1.5%" (mistura preço BTC no GM, foge do propósito)
-- Template atual é bom mas precisa ser mais rígido nas proibições
-
-**GM Defiverso** — Fora das specs:
-- Posts com 200+ chars (limite é 180)
-- "Fato: a descentralização é o futuro" (genérico/guru)
-- "Quase 50% dos investidores nunca venderam" (dado inventado)
-- Falta a personalidade alienígena/espacial da marca
+O projeto usa o bucket `client-files` para arquivos. Não há buckets explícitos criados em migrations visíveis, mas o código referencia `client-files` e `chat-images`.
 
 ---
 
-## Ação: Reescrever os 5 Templates via Migration
+## Novas Tools a Adicionar (8 tools)
 
-### 1. BTC Manhã — Reforçar anti-sensacionalismo
-Adicionar proibições explícitas inline: "NUNCA use 'dispara', 'despenca', 'será que vai'. NUNCA faça perguntas retóricas. NUNCA adicione CTAs." Exemplo mais seco e factual.
+### Storage / Arquivos
 
-### 2. BTC Tarde — Mesmo reforço
-Proibir "O que isso significa?", links, CTAs. Manter tom contextual.
+1. **`upload_file`** — Upload de arquivo via URL ou base64 para qualquer bucket (client-files, chat-images, etc.). Retorna URL pública permanente.
+   - Params: `bucket`, `path`, `file_url` (baixa e sobe) OU `base64` + `content_type`
+   - Suporta imagens, PDFs, vídeos, qualquer tipo
 
-### 3. BTC Noite — Mesmo reforço
-Proibir "Para análises completas", links. Manter tom analítico de fechamento.
+2. **`list_files`** — Lista arquivos de um bucket/pasta
+   - Params: `bucket`, `folder` (optional), `limit`
 
-### 4. GM Madureira — Blindar contra desvios
-Adicionar: "PROIBIDO falar de preço de Bitcoin, insight de mercado, ou qualquer conteúdo educacional. O GM é SOCIAL, não informativo." Mais exemplos de variação (música, café, rotina).
+3. **`delete_file`** — Remove arquivo de um bucket
+   - Params: `bucket`, `path`
 
-### 5. GM Defiverso — Respeitar limite + personalidade
-Reforçar 180 chars max com "CONTE os caracteres". Proibir dados inventados. Adicionar exemplos com personalidade alien/space. Proibir tom de professor.
+4. **`get_file_url`** — Retorna URL pública de um arquivo
+   - Params: `bucket`, `path`
 
-### Arquivos
-- **Database migration** — UPDATE nos 5 `prompt_template` das automações
+### Conteúdo / IA
+
+5. **`generate_content`** — Gera conteúdo via `unified-content-api` de forma simplificada (wrapper com params tipados em vez de chamar invoke_function genérico)
+   - Params: `client_id`, `format`, `topic`, `additional_instructions`
+
+6. **`analyze_url`** — Extrai conteúdo de uma URL via `firecrawl-scrape`
+   - Params: `url`
+
+### Gestão de Clientes
+
+7. **`update_client`** — Atualiza campos do cliente (voice_profile, identity_guide, description, etc.)
+   - Params: `client_id`, `updates`
+
+8. **`list_clients`** — Lista todos os clientes de um workspace
+   - Params: `workspace_id`
+
+---
+
+## Arquivo a Modificar
+
+- **`supabase/functions/mcp-reader/index.ts`** — Adicionar as 8 tools novas após as existentes, antes do HTTP transport setup (linha 472)
+
+## Detalhes de Implementação
+
+- `upload_file` com URL: faz `fetch(url)` → `arrayBuffer()` → `sb.storage.from(bucket).upload(path, buffer, { contentType })`
+- `upload_file` com base64: decodifica → mesmo fluxo
+- `generate_content` chama `unified-content-api` internamente com os headers corretos
+- `analyze_url` chama `firecrawl-scrape` internamente
+- Todos retornam JSON estruturado como as tools existentes
 
