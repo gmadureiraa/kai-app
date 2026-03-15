@@ -279,10 +279,12 @@ serve(async (req) => {
     let writerResult;
     let usedProvider = "google";
     
+    const dynamicTemp = getTemperatureForFormat(normalizedFormat);
+    
     try {
       writerResult = await callLLM(writerMessages, {
         maxTokens: 8192,
-        temperature: 0.7,
+        temperature: dynamicTemp,
       });
       usedProvider = writerResult.provider;
     } catch (error) {
