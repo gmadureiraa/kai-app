@@ -1,109 +1,56 @@
-# Plano de Melhoria: Conteúdo Menos Robótico, Mais Humano e Diverso
 
-## Diagnóstico dos Problemas Atuais
 
-Analisei os últimos 15 posts gerados, os prompts das automações, o pipeline `unified-content-api`, os `quality-rules.ts`, `prompt-builder.ts` e `knowledge-loader.ts`. Os problemas concretos:
+## Diagnóstico: Por que as automações não estão postando
 
-**1. Estrutura repetitiva** — Quase todos os posts longos (LinkedIn, Twitter) seguem o mesmo padrão: afirmação bold → lista com bullets → "insight" → pergunta retórica. A IA encontrou uma fórmula que passa na validação e repete ad infinitum.
+### Problema 1: LinkedIn - Itens criados mas nunca publicados
+As 3 automações de LinkedIn (Artigo de Opinião, Building in Public, Case & Prova Social) estão **funcionando corretamente** na geração de conteúdo e imagens. O problema é que todas estão com `auto_publish: false`. Os itens são criados com status "idea" no planejamento e ficam lá esperando publicação manual. Nenhum deles jamais é publicado automaticamente.
 
-**2. Tom "guru de LinkedIn"** — Frases como "O que founders geralmente não falam", "Hot take:", "Aqui está o que funciona" são estruturalmente genéricas mesmo sem cair na lista de frases proibidas.
+### Problema 2: Threads - Nenhuma automação configurada
+As credenciais do Threads (conta `madureira0x`) estão válidas, mas **não existe nenhuma automação** direcionada ao Threads.
 
-**3. Dados inventados** — Posts com "Vi 47 agências", "300+ marketers", "$25M de receita" são provavelmente alucinados. A IA cria números para parecer autoritativa.
+### Problema 3: Bug no retry de imagem
+No `process-automations`, linha ~1322, o retry de geração de imagem referencia a variável `resolvedImagePrompt` que **não existe** no escopo (o nome correto é `fullImagePrompt`). Isso faz o retry falhar silenciosamente.
 
-**4. Jornal Cripto monótono** — Os 3 posts diários de BTC price seguem formato idêntico. As notícias RSS são resumos secos sem personalidade.
-
-**5. Falta de Voice Profile no Jornal Cripto** — O voice_profile está `{}` vazio, então a IA usa tom genérico padrão.
-
-**6. Anti-exemplos insuficientes** — O sistema puxa só 5-7 posts recentes, mas como todos são iguais, a IA simplesmente produz variações mínimas do mesmo padrão.
-
-7. nos posts do jroan lcripto com base em notícias, não precisamos colocar links em nenhum dos casos 
+### Problema 4: Qualidade do conteúdo LinkedIn repetitivo
+Os posts gerados para LinkedIn estão todos girando em torno do mesmo tema ("clareza vs complexidade em Web3"). Falta diversidade temática e o sistema de variação (que existe para tweets) não está implementado para LinkedIn.
 
 ---
 
-## Plano de Ação (6 frentes)
+## Plano de Implementação
 
-### 1. Expandir lista de padrões estruturais proibidos em `quality-rules.ts`
+### 1. Corrigir bug do retry de imagem no process-automations
+- Substituir `resolvedImagePrompt` por `fullImagePrompt` na linha do retry
 
-Adicionar uma nova camada de detecção: **padrões estruturais de IA**, não apenas frases. Exemplos:
+### 2. Criar sistema de variação para LinkedIn (anti-repetição)
+Adicionar categorias editoriais para LinkedIn similares ao `GM_VARIATION_CATEGORIES` dos tweets:
+- **Artigo de Opinião**: Análise contrarian de tendência, dados concretos, framework próprio
+- **Building in Public**: Bastidores reais, números, aprendizados honestos, erros
+- **Case & Prova Social**: Resultados de clientes, métricas antes/depois, processo
 
-- Abertura "X fez/disse Y. O que poucos sabem:"
-- Padrão "lista de contrastes" (fazem X / não fazem Y)
-- "Hot take:" como abertura
-- "Aqui está o que funciona" / "O que eu aprendi"
-- Números suspeitosamente redondos sem fonte ("300+ empresas", "92% dos builders")
+Cada automação LinkedIn receberá um `variation_index` rotativo com sub-temas específicos para evitar repetição.
 
-Adicionar validação no `content-validator.ts` para detectar e reprovar esses padrões.
+### 3. Melhorar prompts LinkedIn com estratégia de conteúdo
+Enriquecer os prompts usando o guia de conteúdo do Madureira (`public/clients/madureira/guia-conteudo.md`):
+- Incorporar os 5 pilares de conteúdo como rotação temática
+- Usar tom de voz definido: técnico mas didático, direto, visionário
+- Adicionar instruções de formatação específicas para LinkedIn (quebras de linha, storytelling, CTA)
 
-### 2. Reformar instruções de variação editorial com exemplos concretos
+### 4. Habilitar auto_publish para LinkedIn (com revisão inteligente)
+Alterar as 3 automações de LinkedIn para `auto_publish: true` para que os posts sejam publicados automaticamente após geração.
 
-Os `VARIATION_CATEGORIES` atuais dão instruções vagas ("Use um tom provocativo"). Reformar para incluir **exemplos concretos de formato de output** para cada categoria:
+### 5. Criar automações para Threads
+Criar 2-3 automações de Threads para o perfil Madureira:
+- **Threads Diário** (daily): Repurpose do melhor tweet do dia ou insight rápido
+- **Threads Semanal** (weekly): Versão expandida de um tweet de alta performance
 
-```text
-// Antes:
-{ name: 'Provocação', instruction: 'Use um tom provocativo e desafiador...' }
-
-// Depois:
-{ name: 'Provocação', instruction: `Escreva como se estivesse respondendo 
-um tweet que te irritou. Formato: frase curta + ponto final + uma segunda 
-frase que explica por quê. Exemplo de ESTRUTURA (NÃO copie o conteúdo):
-"Todo mundo quer escalar. Ninguém quer simplificar primeiro."
-NÃO use listas, bullets ou formato "X vs Y".` }
-```
-
-Fazer isso para TODAS as categorias de tweet, threads, linkedin e blog.
-
-### 3. Criar regra anti-alucinação de dados no `prompt-builder.ts`
-
-Adicionar regra universal no `UNIVERSAL_OUTPUT_RULES`:
-
-```text
-### REGRA #5: DADOS REAIS OU NENHUM
-- ❌ NUNCA invente números, métricas ou estatísticas
-- ❌ NUNCA cite empresas/pessoas fazendo algo específico sem fonte real
-- ✅ Se não tem dado real, use a experiência pessoal do cliente
-- ✅ Prefira "na minha experiência" a "segundo pesquisa"
-- ✅ Se usar número, seja específico e realista (não "300+ empresas")
-```
-
-### 4. Criar e popular Voice Profile do Jornal Cripto
-
-Atualizar via migration o `voice_profile` do Jornal Cripto com tom definido:
-
-- **Tone**: Informativo, acessível, ligeiramente descontraído. Notícias sem sensacionalismo.
-- **Use**: "atualização", "dados mostram", "segundo", "cotação", "neste momento"
-- **Avoid**: "corre!", "urgente", "oportunidade imperdível", "bomba", "fique de olho", "saiba mais"
-
-### 5. Diversificar posts de preço do BTC (Jornal Cripto)
-
-Os 3 posts diários (manhã/tarde/noite) usam o mesmo prompt. Criar 3 templates distintos:
-
-- **Manhã**: Formato "bom dia cripto" — resumo rápido em 1-2 linhas, tom casual
-- **Tarde**: Formato "análise rápida" — preço + contexto do que movimentou (usa variação editorial)  
-- **Noite**: Formato "fechamento" — resumo do dia, tom mais analítico
-
-Atualizar os `prompt_template` das 3 automações de BTC.
-
-### 6. Melhorar anti-exemplos com detecção de padrão estrutural
-
-No `process-automations`, ao carregar anti-exemplos, extrair não apenas o texto mas os **padrões estruturais** usados (abertura com pergunta, lista de contrastes, storytelling, etc.) e instruir explicitamente a IA a usar um padrão estrutural DIFERENTE.
-
-Modificar a injeção de anti-exemplos no `buildEnrichedPrompt()` para adicionar:
-
-```text
-PADRÕES ESTRUTURAIS JÁ USADOS RECENTEMENTE:
-- Abertura com nome de pessoa + feito impressionante (3x)
-- Lista de contrastes "fazem X / não fazem Y" (4x)
-- Pergunta retórica no final (5x)
-
-USE UM PADRÃO ESTRUTURAL DIFERENTE.
-```
+### 6. Melhorar geração de imagem para LinkedIn
+- Ajustar o aspect ratio para LinkedIn: `1.91:1` (landscape) em vez de `1:1`
+- Enriquecer prompts de imagem com contexto profissional/corporativo
+- Usar modelo `google/gemini-3-pro-image-preview` para maior qualidade nas imagens de LinkedIn
 
 ---
 
 ### Arquivos a modificar
+1. `supabase/functions/process-automations/index.ts` - Fix retry bug, adicionar variação LinkedIn, melhorar prompts
+2. Database: Atualizar `planning_automations` para habilitar auto_publish nas automações LinkedIn e criar novas automações Threads
 
-1. `**supabase/functions/_shared/quality-rules.ts**` — Adicionar padrões estruturais proibidos + regra anti-alucinação
-2. `**supabase/functions/_shared/prompt-builder.ts**` — Regra #5 (dados reais) no `UNIVERSAL_OUTPUT_RULES`
-3. `**supabase/functions/_shared/content-validator.ts**` — Validação de padrões estruturais repetitivos
-4. `**supabase/functions/process-automations/index.ts**` — Reformar `VARIATION_CATEGORIES` (tweet, linkedin, threads, blog) com exemplos concretos + melhorar anti-exemplos com detecção de padrão estrutural + diversificar templates BTC
-5. **Database migration** — Popular voice_profile do Jornal Cripto + atualizar prompt_templates dos 3 posts de BTC
