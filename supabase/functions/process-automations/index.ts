@@ -1296,10 +1296,16 @@ serve(async (req) => {
             // LinkedIn editorial variation system
             if (automation.content_type === 'linkedin_post') {
               const triggerConfig = automation.trigger_config as any;
-              const variationIndex = triggerConfig.variation_index || 0;
-              const linkedInVariation = getLinkedInVariation(automation.name, variationIndex);
               
-              // Fetch recent LinkedIn posts as anti-examples
+              // Get editorial type from automation name
+              let editorialType = 'opinion';
+              if (automation.name.toLowerCase().includes('building')) editorialType = 'building_in_public';
+              else if (automation.name.toLowerCase().includes('case') || automation.name.toLowerCase().includes('prova')) editorialType = 'case_study';
+              
+              const categories = LINKEDIN_VARIATION_CATEGORIES[editorialType] || LINKEDIN_VARIATION_CATEGORIES['opinion'];
+              const { index: variationIndex, variation, updatedRecentIndices } = selectVariationWithCooldown(categories, triggerConfig);
+              
+              // Fetch recent LinkedIn posts as anti-examples (increased to 12)
               let recentPosts: string[] = [];
               try {
                 const { data: recent } = await supabase
@@ -1309,18 +1315,20 @@ serve(async (req) => {
                   .eq('platform', 'linkedin')
                   .not('content', 'is', null)
                   .order('created_at', { ascending: false })
-                  .limit(5);
+                  .limit(12);
                 
                 if (recent) {
-                  recentPosts = recent.map(p => p.content!).filter(Boolean).map(c => c.substring(0, 200));
+                  recentPosts = recent.map(p => p.content!).filter(Boolean).map(c => c.substring(0, 300));
                 }
               } catch (e) {
                 console.warn('Could not fetch recent LinkedIn posts:', e);
               }
               
+              const lengthMod = getLengthModifier();
+              
               variationContext = {
-                category: `LinkedIn ${linkedInVariation.editorialType}: ${linkedInVariation.category}`,
-                instruction: `${linkedInVariation.instruction}
+                category: `LinkedIn ${editorialType}: ${variation.name}`,
+                instruction: `${variation.instruction}${lengthMod}
 
 📝 FORMATO LINKEDIN OBRIGATÓRIO:
 - Primeiras 2 linhas = GANCHO IRRESISTÍVEL (determinam se clicam em "ver mais")
@@ -1335,27 +1343,27 @@ serve(async (req) => {
                 recentTweets: recentPosts,
               };
               
-              // Increment variation index
+              // Update with random cooldown
               await supabase
                 .from('planning_automations')
                 .update({
                   trigger_config: {
                     ...automation.trigger_config,
                     variation_index: variationIndex + 1,
+                    recent_variation_indices: updatedRecentIndices,
                   }
                 })
                 .eq('id', automation.id);
               
-              console.log(`LinkedIn Variation: ${linkedInVariation.category} (type: ${linkedInVariation.editorialType}, index ${variationIndex})`);
+              console.log(`LinkedIn Variation: ${variation.name} (random, cooldown: [${updatedRecentIndices}]), ${recentPosts.length} anti-examples`);
             }
             
             // Threads editorial variation system
             if (automation.content_type === 'social_post' && (derivedPlatform === 'threads')) {
               const triggerConfig = automation.trigger_config as any;
-              const variationIndex = (triggerConfig.variation_index || 0) % THREADS_VARIATION_CATEGORIES.length;
-              const variation = THREADS_VARIATION_CATEGORIES[variationIndex];
+              const { index: variationIndex, variation, updatedRecentIndices } = selectVariationWithCooldown(THREADS_VARIATION_CATEGORIES, triggerConfig);
               
-              // Fetch recent Threads posts as anti-examples
+              // Fetch recent Threads posts as anti-examples (increased to 12)
               let recentPosts: string[] = [];
               try {
                 const { data: recent } = await supabase
@@ -1365,40 +1373,42 @@ serve(async (req) => {
                   .eq('platform', 'threads')
                   .not('content', 'is', null)
                   .order('created_at', { ascending: false })
-                  .limit(7);
+                  .limit(12);
                 
                 if (recent) {
-                  recentPosts = recent.map(p => p.content!).filter(Boolean).map(c => c.substring(0, 200));
+                  recentPosts = recent.map(p => p.content!).filter(Boolean).map(c => c.substring(0, 300));
                 }
               } catch (e) {
                 console.warn('Could not fetch recent Threads posts:', e);
               }
               
+              const lengthMod = getLengthModifier();
+              
               variationContext = {
                 category: `Threads: ${variation.name}`,
-                instruction: variation.instruction,
+                instruction: variation.instruction + lengthMod,
                 recentTweets: recentPosts,
               };
               
-              // Increment variation index
+              // Update with random cooldown
               await supabase
                 .from('planning_automations')
                 .update({
                   trigger_config: {
                     ...automation.trigger_config,
                     variation_index: variationIndex + 1,
+                    recent_variation_indices: updatedRecentIndices,
                   }
                 })
                 .eq('id', automation.id);
               
-              console.log(`Threads Variation: ${variation.name} (index ${variationIndex}), ${recentPosts.length} anti-examples`);
+              console.log(`Threads Variation: ${variation.name} (random, cooldown: [${updatedRecentIndices}]), ${recentPosts.length} anti-examples`);
             }
             
             // Blog editorial variation system
             if (automation.content_type === 'blog_post' || automation.content_type === 'article') {
               const triggerConfig = automation.trigger_config as any;
-              const variationIndex = (triggerConfig.variation_index || 0) % BLOG_VARIATION_CATEGORIES.length;
-              const variation = BLOG_VARIATION_CATEGORIES[variationIndex];
+              const { index: variationIndex, variation, updatedRecentIndices } = selectVariationWithCooldown(BLOG_VARIATION_CATEGORIES, triggerConfig);
               
               variationContext = {
                 category: `Blog: ${variation.name}`,
@@ -1406,18 +1416,19 @@ serve(async (req) => {
                 recentTweets: [], // Blog posts don't need anti-examples as frequently
               };
               
-              // Increment variation index
+              // Update with random cooldown
               await supabase
                 .from('planning_automations')
                 .update({
                   trigger_config: {
                     ...automation.trigger_config,
                     variation_index: variationIndex + 1,
+                    recent_variation_indices: updatedRecentIndices,
                   }
                 })
                 .eq('id', automation.id);
               
-              console.log(`Blog Variation: ${variation.name} (index ${variationIndex})`);
+              console.log(`Blog Variation: ${variation.name} (random, cooldown: [${updatedRecentIndices}])`);
             }
             let youtubeTranscript = "";
             
