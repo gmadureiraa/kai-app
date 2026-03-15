@@ -37,6 +37,7 @@ import {
 // Centralized prompt builder
 import {
   buildWriterSystemPrompt,
+  getTemperatureForFormat,
 } from "../_shared/prompt-builder.ts";
 
 // Centralized LLM module with retry + fallback
