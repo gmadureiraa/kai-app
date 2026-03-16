@@ -367,7 +367,7 @@ async function handleCallback(
           if (newContent) {
             await supabase
               .from('planning_items')
-              .update({ body: newContent, status: 'idea' })
+              .update({ content: newContent, status: 'idea' })
               .eq('id', itemId);
 
             const preview = newContent.substring(0, 800);
