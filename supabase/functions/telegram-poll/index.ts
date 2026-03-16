@@ -158,11 +158,16 @@ async function handleCallback(
       console.log(`[telegram-poll] Querying planning_items for id="${itemId}"`);
       const { data: item, error: itemError } = await supabase
         .from('planning_items')
-        .select('workspace_id, title, status, client_id, content, body, media_urls, metadata, content_type, platform')
+        .select('workspace_id, title, status, client_id, content, media_urls, metadata, content_type, platform')
         .eq('id', itemId)
         .maybeSingle();
 
       console.log(`[telegram-poll] Query result: item=${item ? 'found' : 'null'}, error=${itemError ? JSON.stringify(itemError) : 'none'}`);
+
+      if (itemError) {
+        await sendReply(chatId, `❌ Erro ao buscar item para aprovação.`, headers);
+        return;
+      }
 
       if (!item) {
         await sendReply(chatId, `❌ Item não encontrado (ID: ${itemId.substring(0, 8)}...). Pode ter sido excluído.`, headers);
