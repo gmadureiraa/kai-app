@@ -713,13 +713,13 @@ async function handleMessage(
             .from('planning_items')
             .insert({
               title: topic,
-              body: content,
+              content,
               status: 'idea',
               client_id: clientId,
               workspace_id: client.workspace_id,
               column_id: ideaColumn?.id,
               content_type: 'post',
-              source: 'telegram',
+              metadata: { source: 'telegram' },
             })
             .select('id')
             .single();
