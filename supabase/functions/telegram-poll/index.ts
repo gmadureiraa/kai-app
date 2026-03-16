@@ -295,7 +295,7 @@ async function handleCallback(
         .from('planning_items')
         .select('title')
         .eq('id', itemId)
-        .single();
+        .maybeSingle();
 
       // Ask for feedback with forceReply
       await editMessage(chatId, messageId, `❌ <b>Reprovado.</b>\n"${item?.title || itemId}"`, headers);
