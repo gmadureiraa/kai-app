@@ -326,7 +326,7 @@ export function PlanningItemDialog({
         platform: platform || undefined,
         priority,
         status: finalScheduledAt ? targetStatus : undefined,
-        due_date: dueDate ? format(dueDate, 'yyyy-MM-dd') : undefined,
+        due_date: finalScheduledAt ? format(finalScheduledAt, 'yyyy-MM-dd') : undefined,
         scheduled_at: finalScheduledAt ? finalScheduledAt.toISOString() : undefined,
         media_urls: mediaItems.map(m => m.url),
         assigned_to: assignedTo || undefined,
