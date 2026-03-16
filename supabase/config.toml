@@ -218,3 +218,9 @@ verify_jwt = true
 
 [functions.mcp-reader]
 verify_jwt = false
+
+[functions.telegram-notify]
+verify_jwt = false
+
+[functions.telegram-poll]
+verify_jwt = false
