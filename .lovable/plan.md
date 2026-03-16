@@ -1,56 +1,136 @@
 
 
-## Diagnóstico: Por que as automações não estão postando
+# Plano: Bot Telegram para Gestão de Automações
 
-### Problema 1: LinkedIn - Itens criados mas nunca publicados
-As 3 automações de LinkedIn (Artigo de Opinião, Building in Public, Case & Prova Social) estão **funcionando corretamente** na geração de conteúdo e imagens. O problema é que todas estão com `auto_publish: false`. Os itens são criados com status "idea" no planejamento e ficam lá esperando publicação manual. Nenhum deles jamais é publicado automaticamente.
+## Visão Geral
 
-### Problema 2: Threads - Nenhuma automação configurada
-As credenciais do Threads (conta `madureira0x`) estão válidas, mas **não existe nenhuma automação** direcionada ao Threads.
-
-### Problema 3: Bug no retry de imagem
-No `process-automations`, linha ~1322, o retry de geração de imagem referencia a variável `resolvedImagePrompt` que **não existe** no escopo (o nome correto é `fullImagePrompt`). Isso faz o retry falhar silenciosamente.
-
-### Problema 4: Qualidade do conteúdo LinkedIn repetitivo
-Os posts gerados para LinkedIn estão todos girando em torno do mesmo tema ("clareza vs complexidade em Web3"). Falta diversidade temática e o sistema de variação (que existe para tweets) não está implementado para LinkedIn.
+Criar um bot Telegram que funciona como hub de controle do kAI. Todo conteúdo gerado por automações será enviado ao Telegram com texto + imagem. Você poderá aprovar, reprovar, ou pedir regeneração direto pelo chat. Além disso, o bot responderá com IA para demandas rápidas.
 
 ---
 
-## Plano de Implementação
+## Arquitetura
 
-### 1. Corrigir bug do retry de imagem no process-automations
-- Substituir `resolvedImagePrompt` por `fullImagePrompt` na linha do retry
-
-### 2. Criar sistema de variação para LinkedIn (anti-repetição)
-Adicionar categorias editoriais para LinkedIn similares ao `GM_VARIATION_CATEGORIES` dos tweets:
-- **Artigo de Opinião**: Análise contrarian de tendência, dados concretos, framework próprio
-- **Building in Public**: Bastidores reais, números, aprendizados honestos, erros
-- **Case & Prova Social**: Resultados de clientes, métricas antes/depois, processo
-
-Cada automação LinkedIn receberá um `variation_index` rotativo com sub-temas específicos para evitar repetição.
-
-### 3. Melhorar prompts LinkedIn com estratégia de conteúdo
-Enriquecer os prompts usando o guia de conteúdo do Madureira (`public/clients/madureira/guia-conteudo.md`):
-- Incorporar os 5 pilares de conteúdo como rotação temática
-- Usar tom de voz definido: técnico mas didático, direto, visionário
-- Adicionar instruções de formatação específicas para LinkedIn (quebras de linha, storytelling, CTA)
-
-### 4. Habilitar auto_publish para LinkedIn (com revisão inteligente)
-Alterar as 3 automações de LinkedIn para `auto_publish: true` para que os posts sejam publicados automaticamente após geração.
-
-### 5. Criar automações para Threads
-Criar 2-3 automações de Threads para o perfil Madureira:
-- **Threads Diário** (daily): Repurpose do melhor tweet do dia ou insight rápido
-- **Threads Semanal** (weekly): Versão expandida de um tweet de alta performance
-
-### 6. Melhorar geração de imagem para LinkedIn
-- Ajustar o aspect ratio para LinkedIn: `1.91:1` (landscape) em vez de `1:1`
-- Enriquecer prompts de imagem com contexto profissional/corporativo
-- Usar modelo `google/gemini-3-pro-image-preview` para maior qualidade nas imagens de LinkedIn
+```text
+┌─────────────────────┐     ┌──────────────────────┐
+│ process-automations │────▶│ telegram-notify      │
+│ (já existente)      │     │ (nova edge function) │
+│                     │     │ Envia texto+imagem    │
+└─────────────────────┘     │ com botões inline     │
+                            └──────────┬───────────┘
+                                       │
+                            ┌──────────▼───────────┐
+                            │  Telegram Bot API    │
+                            │  (via connector)     │
+                            └──────────┬───────────┘
+                                       │
+                            ┌──────────▼───────────┐
+                            │ telegram-poll        │
+                            │ (nova edge function) │
+                            │ getUpdates cada 1min │
+                            │ Processa callbacks   │
+                            │ + mensagens de texto │
+                            └──────────────────────┘
+```
 
 ---
 
-### Arquivos a modificar
-1. `supabase/functions/process-automations/index.ts` - Fix retry bug, adicionar variação LinkedIn, melhorar prompts
-2. Database: Atualizar `planning_automations` para habilitar auto_publish nas automações LinkedIn e criar novas automações Threads
+## Componentes a Criar
+
+### 1. Conectar Bot Telegram
+- Usar o connector `telegram` via `standard_connectors--connect`
+- Configurar o `chat_id` do seu Telegram pessoal (obtido via `/start` no bot)
+
+### 2. Tabelas no banco
+
+```sql
+-- Estado do polling e config do bot
+telegram_bot_config (
+  id int PRIMARY KEY CHECK (id = 1),
+  chat_id bigint,            -- seu chat_id pessoal
+  update_offset bigint,      -- controle do getUpdates
+  is_active boolean DEFAULT true,
+  updated_at timestamptz
+)
+
+-- Mensagens recebidas do Telegram
+telegram_messages (
+  id uuid PRIMARY KEY,
+  update_id bigint UNIQUE,
+  chat_id bigint,
+  message_text text,
+  callback_data text,        -- para botões inline (approve/reject)
+  raw_update jsonb,
+  processed boolean DEFAULT false,
+  created_at timestamptz
+)
+```
+
+### 3. Edge Function: `telegram-notify`
+Chamada pelo `process-automations` após criar cada item. Responsável por:
+- Enviar mensagem formatada com título, conteúdo (preview), plataforma, cliente
+- Se tiver imagem, enviar via `sendPhoto` com caption
+- Incluir **botões inline** (InlineKeyboardMarkup):
+  - `✅ Aprovar` → callback `approve:{item_id}`
+  - `❌ Reprovar` → callback `reject:{item_id}`
+  - `🔄 Regenerar` → callback `regen:{item_id}`
+  - `📝 Publicar agora` → callback `publish:{item_id}`
+
+### 4. Edge Function: `telegram-poll`
+Polling loop (55s por invocação, cron a cada 1min):
+- Processa **callback_query** (botões inline):
+  - `approve:{id}` → Atualiza `planning_items.status` para "approved", move para coluna "approved"
+  - `reject:{id}` → Atualiza status para "rejected", responde pedindo feedback
+  - `regen:{id}` → Chama `unified-content-api` para regenerar conteúdo, atualiza item, reenvia preview
+  - `publish:{id}` → Chama `late-post` para publicar imediatamente
+- Processa **mensagens de texto**:
+  - Comandos: `/status`, `/pendentes`, `/aprovar_todos`
+  - Texto livre → Responde via `kai-simple-chat` (IA conversacional)
+  - Demandas de conteúdo: "cria um post sobre X para o Madureira" → Cria item no planejamento
+
+### 5. Integração no `process-automations`
+Após criar o item e gerar conteúdo/imagem (linha ~1963, onde já cria notificação):
+- Chamar `telegram-notify` passando `item_id`, conteúdo, imagem, plataforma, nome da automação
+- Isso acontece independente de `auto_publish` — o Telegram sempre recebe
+
+### 6. Cron Job (pg_cron + pg_net)
+Agendar `telegram-poll` a cada minuto para processar respostas.
+
+---
+
+## Fluxo do Usuário
+
+1. Automação gera conteúdo → Telegram recebe mensagem com preview + botões
+2. Você clica `✅ Aprovar` → Item marcado como aprovado no planejamento
+3. Você clica `📝 Publicar agora` → Post é publicado imediatamente na plataforma
+4. Você clica `❌ Reprovar` → Item rejeitado, bot pergunta motivo
+5. Você clica `🔄 Regenerar` → Conteúdo regenerado, nova preview enviada
+6. Você escreve "cria um tweet sobre tokenização de ativos para o Madureira" → Item criado no planejamento
+
+---
+
+## Arquivos a Criar/Modificar
+
+| Arquivo | Ação |
+|---|---|
+| `supabase/functions/telegram-notify/index.ts` | **Criar** — Envio de notificações com botões |
+| `supabase/functions/telegram-poll/index.ts` | **Criar** — Polling + processamento de callbacks |
+| `supabase/functions/process-automations/index.ts` | **Modificar** — Chamar telegram-notify após criar item |
+| Database (2 tabelas) | **Criar** — `telegram_bot_config`, `telegram_messages` |
+| Database (cron job) | **Criar** — Polling a cada 1 minuto |
+
+---
+
+## Fase 1 (este plano)
+- Conectar bot Telegram
+- Criar tabelas
+- `telegram-notify`: envio de conteúdo com botões inline
+- `telegram-poll`: processar aprovações/rejeições
+- Integrar no `process-automations`
+- Cron job
+
+## Fase 2 (futuro)
+- Comandos de texto avançados (`/pendentes`, `/status`)
+- Resposta por IA via `kai-simple-chat`
+- Criação de conteúdo por texto livre
+- Relatório diário resumo
 
