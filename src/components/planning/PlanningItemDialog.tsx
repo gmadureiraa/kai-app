@@ -138,7 +138,7 @@ export function PlanningItemDialog({
   const [columnId, setColumnId] = useState<string>('');
   const [contentType, setContentType] = useState<ContentTypeKey>('tweet');
   const [priority, setPriority] = useState<PlanningPriority>('medium');
-  const [dueDate, setDueDate] = useState<Date | undefined>();
+  
   const [scheduledAt, setScheduledAt] = useState<Date | undefined>();
   const [scheduledTime, setScheduledTime] = useState<string>('09:00');
   const [isSchedulingToLate, setIsSchedulingToLate] = useState(false);
