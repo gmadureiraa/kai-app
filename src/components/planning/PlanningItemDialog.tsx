@@ -91,7 +91,7 @@ export function PlanningItemDialog({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
   const [showImageModal, setShowImageModal] = useState(false);
-  const [showMoreOptions, setShowMoreOptions] = useState(false);
+  
   const [freshItem, setFreshItem] = useState<PlanningItem | null>(null);
   const [isFetchingItem, setIsFetchingItem] = useState(false);
   
