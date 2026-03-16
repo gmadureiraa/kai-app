@@ -274,7 +274,7 @@ export function PlanningItemDialog({
       setColumnId(defaultColumnId || columns[0]?.id || '');
       setContentType('tweet');
       setPriority('medium');
-      setDueDate(defaultDate);
+      setScheduledAt(defaultDate);
       setScheduledAt(undefined);
       setScheduledTime('09:00');
       setIsSchedulingToLate(false);
