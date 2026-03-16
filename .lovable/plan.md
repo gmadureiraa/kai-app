@@ -1,33 +1,36 @@
 
 
-## Bot Telegram — Gestão de Automações (Implementado)
+## Bot Telegram — Gestão de Automações (v2)
 
-### O que foi feito
+### Funcionalidades implementadas
 
-1. **Tabelas criadas:**
-   - `telegram_bot_config` — Singleton com chat_id e offset do polling
-   - `telegram_messages` — Log de mensagens/callbacks recebidos
-
-2. **Edge Functions:**
-   - `telegram-notify` — Envia conteúdo gerado + botões inline (Aprovar/Reprovar/Regenerar/Publicar)
-   - `telegram-poll` — Polling loop de 55s com processamento de callbacks e comandos
-
-3. **Integração no `process-automations`:**
-   - Após cada item criado, envia notificação Telegram com preview + imagem + botões
-
-4. **Cron Job:**
-   - `poll-telegram-updates` — Executa a cada minuto via pg_cron
-
-### Comandos disponíveis no bot
+#### Comandos
 - `/start` — Registra chat_id e ativa bot
-- `/pendentes` — Lista 10 itens pendentes
+- `/pendentes` — Lista 10 itens pendentes **com botões de ação inline** (aprovar/reprovar)
 - `/status` — Resumo (pendentes, aprovados, publicados hoje)
+- `/aprovar_todos` — Aprova em lote todos itens pendentes
+- `/pular` — Pula feedback de rejeição
 
-### Ações inline (botões)
+#### Ações inline (botões)
 - ✅ Aprovar → Move item para coluna "approved"
-- ❌ Reprovar → Marca como rejected
+- ❌ Reprovar → Marca como rejected + pede feedback com `forceReply`
 - 🔄 Regenerar → Chama unified-content-api e reenvia preview
-- 📝 Publicar agora → Publica via late-post
+- 📝 Publicar agora → Publica via late-post (com link do post na confirmação)
 
-### Próximo passo
-- Enviar `/start` para o bot no Telegram para registrar o chat_id
+#### IA e Criação
+- **Texto livre** → Resposta por IA via Lovable AI Gateway (Gemini Flash) com contexto das últimas mensagens
+- **Criação de conteúdo** → "cria um post sobre X para o [cliente]" detecta intent, gera conteúdo e cria planning_item com botões
+- **Feedback de rejeição** → Ao reprovar, bot pede motivo e salva em `metadata.rejection_reason`
+
+#### Relatório Diário
+- Cron `daily-telegram-report` → 11:00 UTC (8h BRT)
+- Envia resumo com: pendentes, aprovados, publicados ontem/hoje, reprovados, próximos agendados
+
+### Edge Functions
+- `telegram-poll` — Polling loop 55s + processamento completo
+- `telegram-notify` — Envia notificações com botões inline
+- `telegram-daily-report` — Resumo diário automático
+
+### Cron Jobs
+- `poll-telegram-updates` — A cada minuto
+- `daily-telegram-report` — 11:00 UTC diário
