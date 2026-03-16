@@ -2017,6 +2017,51 @@ serve(async (req) => {
           }
         }
 
+        // ========== ENVIAR NOTIFICAÇÃO TELEGRAM ==========
+        try {
+          // Fetch client name for the notification
+          let clientName = 'N/A';
+          if (automation.client_id) {
+            const { data: clientData } = await supabase
+              .from('clients')
+              .select('name')
+              .eq('id', automation.client_id)
+              .single();
+            clientName = clientData?.name || 'N/A';
+          }
+
+          const telegramPayload = {
+            item_id: newItem.id,
+            title: itemTitle,
+            content: generatedContent || itemDescription || '',
+            image_url: mediaUrls?.[0] || null,
+            platform: derivedPlatform,
+            client_name: clientName,
+            automation_name: automation.name,
+            content_type: automation.content_type,
+          };
+
+          fetch(`${supabaseUrl}/functions/v1/telegram-notify`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${supabaseKey}`,
+            },
+            body: JSON.stringify(telegramPayload),
+          }).then(async (res) => {
+            if (res.ok) {
+              console.log(`📱 Telegram notification sent for item ${newItem.id}`);
+            } else {
+              const errText = await res.text();
+              console.warn(`⚠️ Telegram notification failed: ${errText.substring(0, 200)}`);
+            }
+          }).catch(err => {
+            console.warn(`⚠️ Telegram notification error:`, err);
+          });
+        } catch (telegramError) {
+          console.warn('Telegram notification error (non-blocking):', telegramError);
+        }
+
         // Build trigger data for run record - include item_id for detail lookup
         const triggerDataForRun: Record<string, unknown> = {
           item_id: newItem.id,
