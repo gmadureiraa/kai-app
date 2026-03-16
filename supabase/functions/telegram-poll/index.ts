@@ -158,11 +158,16 @@ async function handleCallback(
       console.log(`[telegram-poll] Querying planning_items for id="${itemId}"`);
       const { data: item, error: itemError } = await supabase
         .from('planning_items')
-        .select('workspace_id, title, status, client_id, content, body, media_urls, metadata, content_type, platform')
+        .select('workspace_id, title, status, client_id, content, media_urls, metadata, content_type, platform')
         .eq('id', itemId)
         .maybeSingle();
 
       console.log(`[telegram-poll] Query result: item=${item ? 'found' : 'null'}, error=${itemError ? JSON.stringify(itemError) : 'none'}`);
+
+      if (itemError) {
+        await sendReply(chatId, `❌ Erro ao buscar item para aprovação.`, headers);
+        return;
+      }
 
       if (!item) {
         await sendReply(chatId, `❌ Item não encontrado (ID: ${itemId.substring(0, 8)}...). Pode ter sido excluído.`, headers);
@@ -193,7 +198,7 @@ async function handleCallback(
         await editMessage(chatId, messageId, `✅ <b>Aprovado!</b> Publicando...\n"${item.title}"`, headers);
 
         const targetPlatforms: string[] = itemMeta.target_platforms || [item.platform].filter(Boolean);
-        const generatedContent = item.content || item.body || '';
+        const generatedContent = item.content || '';
         const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
         let publishSuccess = false;
 
@@ -362,7 +367,7 @@ async function handleCallback(
           if (newContent) {
             await supabase
               .from('planning_items')
-              .update({ body: newContent, status: 'idea' })
+              .update({ content: newContent, status: 'idea' })
               .eq('id', itemId);
 
             const preview = newContent.substring(0, 800);
@@ -422,7 +427,7 @@ async function handleCallback(
           body: JSON.stringify({
             clientId: item.client_id,
             platform,
-            content: item.body,
+            content: item.content,
             planningItemId: itemId,
             mediaItems: item.media_urls?.map((url: string) => ({
               url,
@@ -708,13 +713,13 @@ async function handleMessage(
             .from('planning_items')
             .insert({
               title: topic,
-              body: content,
+              content,
               status: 'idea',
               client_id: clientId,
               workspace_id: client.workspace_id,
               column_id: ideaColumn?.id,
               content_type: 'post',
-              source: 'telegram',
+              metadata: { source: 'telegram' },
             })
             .select('id')
             .single();
