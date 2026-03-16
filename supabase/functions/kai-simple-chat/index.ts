@@ -1864,7 +1864,7 @@ SIGA RIGOROSAMENTE a ordem de prioridade:
 
     console.log("[kai-simple-chat] Context built:", {
       systemPromptLength: systemPrompt.length,
-      historyMessages: limitedHistory.length,
+      historyMessages: recentHistory.length,
       hasMetrics: !!metricsContext, hasPlanning: !!planningContext,
       hasVoice: !!voiceGuidelinesContext, hasKnowledge: !!knowledgeContext,
       hasDocs: !!docsWebsitesContext, hasLibrary: !!libraryExamplesContext,
