@@ -3166,6 +3166,63 @@ export type Database = {
         }
         Relationships: []
       }
+      telegram_bot_config: {
+        Row: {
+          chat_id: number | null
+          id: number
+          is_active: boolean
+          update_offset: number
+          updated_at: string
+        }
+        Insert: {
+          chat_id?: number | null
+          id: number
+          is_active?: boolean
+          update_offset?: number
+          updated_at?: string
+        }
+        Update: {
+          chat_id?: number | null
+          id?: number
+          is_active?: boolean
+          update_offset?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      telegram_messages: {
+        Row: {
+          callback_data: string | null
+          chat_id: number
+          created_at: string
+          id: string
+          message_text: string | null
+          processed: boolean
+          raw_update: Json
+          update_id: number | null
+        }
+        Insert: {
+          callback_data?: string | null
+          chat_id: number
+          created_at?: string
+          id?: string
+          message_text?: string | null
+          processed?: boolean
+          raw_update: Json
+          update_id?: number | null
+        }
+        Update: {
+          callback_data?: string | null
+          chat_id?: number
+          created_at?: string
+          id?: string
+          message_text?: string | null
+          processed?: boolean
+          raw_update?: Json
+          update_id?: number | null
+        }
+        Relationships: []
+      }
       token_transactions: {
         Row: {
           amount: number
