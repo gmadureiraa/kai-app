@@ -73,8 +73,18 @@ serve(async (req) => {
     const emoji = platformEmoji[platform || ''] || '📋';
     const contentPreview = content ? content.substring(0, 800) : 'Sem conteúdo';
     
+    const headerText = isPublished
+      ? `${emoji} <b>✅ Conteúdo publicado automaticamente</b>`
+      : `${emoji} <b>Nova automação executada</b>`;
+
+    const publishedUrlsText = body.published_urls
+      ? Object.entries(body.published_urls as Record<string, string>)
+          .map(([p, url]) => `🔗 ${p}: ${url}`)
+          .join('\n')
+      : '';
+
     const messageText = [
-      `${emoji} <b>Nova automação executada</b>`,
+      headerText,
       ``,
       `<b>Automação:</b> ${automation_name || 'N/A'}`,
       `<b>Cliente:</b> ${client_name || 'N/A'}`,
@@ -84,7 +94,8 @@ serve(async (req) => {
       `<b>Título:</b> ${title || 'Sem título'}`,
       ``,
       `<pre>${escapeHtml(contentPreview)}</pre>`,
-    ].join('\n');
+      publishedUrlsText ? `\n${publishedUrlsText}` : '',
+    ].filter(Boolean).join('\n');
 
     // Check if already published (informational mode) or pending review
     const isPublished = body.published === true;
