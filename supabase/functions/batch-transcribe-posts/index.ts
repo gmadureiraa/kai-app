@@ -112,10 +112,20 @@ serve(async (req) => {
 
         const transcription = transcriptions.join('\n\n---\n\n') || post.caption || '[Sem conteúdo]';
 
-        // Update the post with transcription
+        // Build thumbnail URL from first image
+        let thumbnailUrl: string | null = null;
+        if (images.length > 0) {
+          thumbnailUrl = `${supabaseUrl}/storage/v1/object/public/client-files/${images[0]}`;
+        }
+
+        // Update the post with transcription + sync metadata
         const { error: updateError } = await adminClient
           .from('instagram_posts')
-          .update({ full_content: transcription })
+          .update({ 
+            full_content: transcription,
+            content_synced_at: new Date().toISOString(),
+            thumbnail_url: thumbnailUrl,
+          })
           .eq('id', post.id);
 
         if (updateError) {
