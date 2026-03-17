@@ -13,6 +13,7 @@ interface PostContentSyncButtonProps {
   permalink: string | null;
   caption: string | null;
   contentSyncedAt: string | null;
+  fullContent?: string | null;
   postType?: string | null;
   onSyncComplete?: () => void;
 }
