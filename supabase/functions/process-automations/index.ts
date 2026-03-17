@@ -1793,11 +1793,9 @@ serve(async (req) => {
           }
         }
 
-        // ========== TELEGRAM APPROVAL GATE ==========
-        // All content goes to review. If auto_publish is enabled, it will only
-        // publish AFTER Telegram approval (approve button click).
-        // We store the auto_publish intent in metadata so telegram-poll knows
-        // to trigger publishing when the item is approved.
+        // ========== AUTO-PUBLISH DIRECTLY ==========
+        // Publish immediately without requiring Telegram approval.
+        // Telegram will receive an informational notification after publishing.
         if (automation.auto_publish && automation.client_id && generatedContent) {
           const itemMeta0 = (newItem.metadata as any) || {};
           const targetPlatforms: string[] = 
@@ -1805,31 +1803,115 @@ serve(async (req) => {
             (automation as any).platforms?.length > 0 ? (automation as any).platforms :
             (derivedPlatform ? [derivedPlatform] : []);
 
-          // Get review column
-          const { data: reviewColumn } = await supabase
-            .from('kanban_columns')
-            .select('id')
-            .eq('workspace_id', automation.workspace_id)
-            .eq('column_type', 'review')
-            .single();
+          const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+          const publishedPlatforms: string[] = [];
+          const publishedUrls: Record<string, string> = {};
+          const latePostIds: Record<string, string> = {};
 
-          await supabase
-            .from('planning_items')
-            .update({
-              status: 'idea',
-              column_id: reviewColumn?.id || columnId,
-              metadata: {
-                ...itemMeta0,
-                pending_telegram_approval: true,
-                auto_publish_on_approve: true,
-                target_platforms: targetPlatforms,
-                automation_id: automation.id,
-                automation_name: automation.name,
-              },
-            })
-            .eq('id', newItem.id);
+          for (const targetPlatform of targetPlatforms) {
+            try {
+              const publishBody: Record<string, unknown> = {
+                clientId: automation.client_id,
+                platform: targetPlatform,
+                content: generatedContent,
+                planningItemId: newItem.id,
+              };
 
-          console.log(`📋 Item ${newItem.id} sent to review — awaiting Telegram approval before publishing to [${targetPlatforms.join(', ')}]`);
+              // Add thread items if available
+              if (automation.content_type === 'thread' && itemMeta0.thread_tweets?.length > 0) {
+                publishBody.threadItems = itemMeta0.thread_tweets.map((t: any) => ({
+                  text: t.text,
+                  media_urls: t.media_urls || [],
+                }));
+              }
+
+              // Add carousel media if available
+              if (automation.content_type === 'carousel' && itemMeta0.carousel_slides?.length > 0) {
+                const carouselMedia: { url: string; type: string }[] = [];
+                for (const slide of itemMeta0.carousel_slides) {
+                  if (slide.media_urls?.length > 0) {
+                    for (const url of slide.media_urls) {
+                      carouselMedia.push({ url, type: url.match(/\.(mp4|mov|webm)$/i) ? 'video' : 'image' });
+                    }
+                  }
+                }
+                if (carouselMedia.length > 0) publishBody.mediaItems = carouselMedia;
+              }
+
+              // Regular media
+              if (!publishBody.threadItems && !publishBody.mediaItems && mediaUrls?.length > 0) {
+                publishBody.mediaItems = mediaUrls.map((url: string) => ({
+                  url,
+                  type: url.match(/\.(mp4|mov|webm)$/i) ? 'video' : 'image',
+                }));
+              }
+
+              const publishResponse = await fetch(`${supabaseUrl}/functions/v1/late-post`, {
+                method: 'POST',
+                headers: {
+                  'Authorization': `Bearer ${serviceKey}`,
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(publishBody),
+              });
+
+              if (publishResponse.ok) {
+                const publishResult = await publishResponse.json();
+                const externalPostId = publishResult.externalId || publishResult.postId;
+
+                if (publishResult.success && externalPostId) {
+                  publishedPlatforms.push(targetPlatform);
+                  latePostIds[targetPlatform] = externalPostId;
+                  if (publishResult.postUrl || publishResult.url) {
+                    publishedUrls[targetPlatform] = publishResult.postUrl || publishResult.url;
+                  }
+                  console.log(`📤 Published to ${targetPlatform}: ${externalPostId}`);
+                } else {
+                  console.warn(`⚠️ ${targetPlatform} publish failed: ${publishResult.error || 'unknown'}`);
+                }
+              } else {
+                const errText = await publishResponse.text();
+                console.warn(`❌ ${targetPlatform} publish error: ${errText.substring(0, 200)}`);
+              }
+            } catch (pubErr) {
+              console.error(`❌ ${targetPlatform} publish exception:`, pubErr);
+            }
+          }
+
+          // Update planning item with publish results
+          if (publishedPlatforms.length > 0) {
+            // Get published column
+            const { data: publishedColumn } = await supabase
+              .from('kanban_columns')
+              .select('id')
+              .eq('workspace_id', automation.workspace_id)
+              .eq('column_type', 'published')
+              .single();
+
+            await supabase
+              .from('planning_items')
+              .update({
+                status: 'published',
+                published_at: new Date().toISOString(),
+                column_id: publishedColumn?.id || columnId,
+                external_post_id: Object.values(latePostIds)[0] || null,
+                metadata: {
+                  ...itemMeta0,
+                  auto_published: true,
+                  published_at: new Date().toISOString(),
+                  published_platforms: publishedPlatforms,
+                  late_post_ids: latePostIds,
+                  published_urls: publishedUrls,
+                  automation_id: automation.id,
+                  automation_name: automation.name,
+                },
+              })
+              .eq('id', newItem.id);
+
+            console.log(`✅ Item ${newItem.id} published to [${publishedPlatforms.join(', ')}]`);
+          } else {
+            console.warn(`⚠️ Item ${newItem.id} — no platform published successfully`);
+          }
         }
 
         // Update automation tracking

@@ -86,19 +86,30 @@ serve(async (req) => {
       `<pre>${escapeHtml(contentPreview)}</pre>`,
     ].join('\n');
 
-    // Inline keyboard with action buttons
-    const inlineKeyboard = {
-      inline_keyboard: [
-        [
-          { text: '✅ Aprovar', callback_data: `approve:${item_id}` },
-          { text: '❌ Reprovar', callback_data: `reject:${item_id}` },
-        ],
-        [
-          { text: '🔄 Regenerar', callback_data: `regen:${item_id}` },
-          { text: '📝 Publicar agora', callback_data: `publish:${item_id}` },
-        ],
-      ],
-    };
+    // Check if already published (informational mode) or pending review
+    const isPublished = body.published === true;
+
+    // Inline keyboard — only show action buttons if NOT already published
+    const inlineKeyboard = isPublished
+      ? {
+          inline_keyboard: [
+            [
+              { text: '📋 Ver no painel', callback_data: `view:${item_id}` },
+            ],
+          ],
+        }
+      : {
+          inline_keyboard: [
+            [
+              { text: '✅ Aprovar', callback_data: `approve:${item_id}` },
+              { text: '❌ Reprovar', callback_data: `reject:${item_id}` },
+            ],
+            [
+              { text: '🔄 Regenerar', callback_data: `regen:${item_id}` },
+              { text: '📝 Publicar agora', callback_data: `publish:${item_id}` },
+            ],
+          ],
+        };
 
     const headers = {
       'Authorization': `Bearer ${LOVABLE_API_KEY}`,
