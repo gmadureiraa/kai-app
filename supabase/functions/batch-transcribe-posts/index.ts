@@ -94,7 +94,7 @@ serve(async (req) => {
             body: JSON.stringify({
               imageUrls: images,
               startIndex: 0,
-              userId: user.id,
+              userId: 'batch-process',
               clientId,
             }),
           }
