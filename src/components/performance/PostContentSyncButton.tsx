@@ -198,7 +198,10 @@ export const PostContentSyncButton = ({
     }
   };
 
-  if (contentSyncedAt) {
+  // Consider synced if content_synced_at is set OR full_content exists
+  const isSynced = !!contentSyncedAt || (!!fullContent && fullContent.length > 0);
+
+  if (isSynced) {
     const isVideo = isVideoPost();
     return (
       <Badge 
