@@ -1,36 +1,24 @@
 
 
-## Bot Telegram — Gestão de Automações (v2)
+## Problem
 
-### Funcionalidades implementadas
+The batch transcription process (`batch-transcribe-posts`) updates `full_content` but does NOT set `content_synced_at`. The `PostContentSyncButton` component checks `contentSyncedAt` to decide whether to show a green "Sincronizado" badge or a "Carregar" button. So all batch-processed posts still appear as needing sync.
 
-#### Comandos
-- `/start` — Registra chat_id e ativa bot
-- `/pendentes` — Lista 10 itens pendentes **com botões de ação inline** (aprovar/reprovar)
-- `/status` — Resumo (pendentes, aprovados, publicados hoje)
-- `/aprovar_todos` — Aprova em lote todos itens pendentes
-- `/pular` — Pula feedback de rejeição
+Additionally, the batch process doesn't set `thumbnail_url` from the stored images.
 
-#### Ações inline (botões)
-- ✅ Aprovar → Move item para coluna "approved"
-- ❌ Reprovar → Marca como rejected + pede feedback com `forceReply`
-- 🔄 Regenerar → Chama unified-content-api e reenvia preview
-- 📝 Publicar agora → Publica via late-post (com link do post na confirmação)
+## Plan
 
-#### IA e Criação
-- **Texto livre** → Resposta por IA via Lovable AI Gateway (Gemini Flash) com contexto das últimas mensagens
-- **Criação de conteúdo** → "cria um post sobre X para o [cliente]" detecta intent, gera conteúdo e cria planning_item com botões
-- **Feedback de rejeição** → Ao reprovar, bot pede motivo e salva em `metadata.rejection_reason`
+### 1. Update `batch-transcribe-posts` Edge Function
+- When updating a post after transcription, also set `content_synced_at: new Date().toISOString()`
+- Set `thumbnail_url` from the first image in the `images` array (build the public storage URL)
+- This fixes future batch runs
 
-#### Relatório Diário
-- Cron `daily-telegram-report` → 11:00 UTC (8h BRT)
-- Envia resumo com: pendentes, aprovados, publicados ontem/hoje, reprovados, próximos agendados
+### 2. Backfill already-processed posts (one-time SQL migration)
+- Run a database migration to set `content_synced_at = now()` for all `instagram_posts` where `full_content IS NOT NULL` and `content_synced_at IS NULL`
+- Also set `thumbnail_url` from the first element of `images` array for posts that have images but no thumbnail
 
-### Edge Functions
-- `telegram-poll` — Polling loop 55s + processamento completo
-- `telegram-notify` — Envia notificações com botões inline
-- `telegram-daily-report` — Resumo diário automático
+### 3. Update `PostContentSyncButton` logic (optional improvement)
+- As a fallback, also check if `full_content` exists (not just `content_synced_at`) to show the synced badge — makes the UI resilient to future batch processes
 
-### Cron Jobs
-- `poll-telegram-updates` — A cada minuto
-- `daily-telegram-report` — 11:00 UTC diário
+These three changes will make the table immediately reflect all synced content with proper badges and thumbnails.
+
