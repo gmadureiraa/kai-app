@@ -770,18 +770,6 @@ async function editMessage(
   return data;
 }
 
-async function sendChatAction(
-  chatId: number | string,
-  action: string,
-  headers: Record<string, string>,
-) {
-  await fetch(`${GATEWAY_URL}/sendChatAction`, {
-    method: 'POST',
-    headers,
-    body: JSON.stringify({ chat_id: chatId, action }),
-  }).catch(() => {});
-}
-
 function escapeHtml(text: string): string {
   return text
     .replace(/&/g, '&amp;')
