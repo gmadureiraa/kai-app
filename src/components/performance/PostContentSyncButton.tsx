@@ -24,6 +24,7 @@ export const PostContentSyncButton = ({
   permalink,
   caption,
   contentSyncedAt,
+  fullContent,
   postType,
   onSyncComplete,
 }: PostContentSyncButtonProps) => {
