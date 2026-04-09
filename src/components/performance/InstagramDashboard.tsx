@@ -24,6 +24,7 @@ import { MetricMiniCard } from "./MetricMiniCard";
 import { PerformanceReportGenerator } from "./PerformanceReportGenerator";
 import { GoalProgressCard } from "./GoalProgressCard";
 import { PostAveragesSection } from "./PostAveragesSection";
+import { PostAveragesTrendChart } from "./PostAveragesTrendChart";
 
 import { TopContentTable } from "./TopContentTable";
 import { TopPostsGrid } from "./TopPostsGrid";
@@ -847,6 +848,9 @@ export function InstagramDashboard({
         totalImpressions={filteredPosts.reduce((sum, p) => sum + (p.impressions || 0), 0)}
         avgEngagement={kpis.avgEngagement}
       />
+
+      {/* Post Averages Trend Chart */}
+      <PostAveragesTrendChart posts={filteredPosts} />
 
       {/* Secondary Metrics - Removido: dados duplicados com a seção BestPostsByMetric acima */}
 
