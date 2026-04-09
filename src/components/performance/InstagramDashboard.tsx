@@ -24,6 +24,7 @@ import { MetricMiniCard } from "./MetricMiniCard";
 import { PerformanceReportGenerator } from "./PerformanceReportGenerator";
 import { GoalProgressCard } from "./GoalProgressCard";
 import { PostAveragesSection } from "./PostAveragesSection";
+import { PostAveragesTrendChart } from "./PostAveragesTrendChart";
 
 import { TopContentTable } from "./TopContentTable";
 import { TopPostsGrid } from "./TopPostsGrid";
