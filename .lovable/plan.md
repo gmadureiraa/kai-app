@@ -1,34 +1,41 @@
 
 
-# Melhorias no Planejamento: Menções em Comentários + Notificações
+# Plano: Sino de Notificações no Desktop + Ajustes Gerais
 
-## Situação Atual
-- **Comentários** funcionam (CRUD ok, FK corrigida), mas usam `Input` simples sem suporte a @menções
-- **MentionableInput** já existe e busca membros do workspace via `@` -- mas não é usado nos comentários
-- **NotificationBell** já existe no header com popover/sheet e suporte a tipos como `mention`
-- **Falta**: quando alguém é mencionado em um comentário, nenhuma notificação é criada no banco
+## Problema
+O `NotificationBell` existe e funciona, mas no desktop ele **nao aparece em lugar nenhum** -- so e renderizado no `MobileHeader`. No desktop, o usuario nao tem como ver notificacoes.
 
-## Mudanças Planejadas
+## Mudancas
 
-### 1. Substituir Input por MentionableInput nos Comentários
-- Em `PlanningItemComments.tsx`, trocar o `<Input>` por `<MentionableInput>` para permitir `@user` nos comentários
-- Passar o `clientId` do planning item para que a busca de membros funcione
-- Renderizar menções formatadas no corpo do comentário usando `MentionRenderer`
+### 1. Adicionar NotificationBell na Sidebar (Desktop)
+- No `KaiSidebar.tsx`, adicionar o componente `NotificationBell` na area inferior da sidebar, acima do bloco do usuario
+- Quando a sidebar estiver colapsada, mostrar apenas o icone com badge de contagem
+- Quando expandida, mostrar icone + texto "Notificacoes" + badge
 
-### 2. Criar Notificações ao Mencionar Usuários em Comentários
-- No hook `usePlanningComments.ts`, após inserir o comentário, parsear menções do tipo `user` usando `parseMentions()`
-- Para cada user mencionado, inserir uma notificação na tabela `notifications` com type `mention`
-- Incluir metadata com `planning_item_id` e `comment_id` para navegação
+### 2. Estilizar o Bell para contexto de Sidebar
+- Criar uma variante do botao do bell que se integre visualmente com os outros itens da sidebar (mesmo padding, cores, hover)
+- O popover de notificacoes abre ao lado (right) quando na sidebar
 
-### 3. Melhorar Exibição dos Comentários
-- Usar `MentionRenderer` para renderizar o `comment.content` com menções estilizadas (badges clicáveis)
-- Adicionar prop `clientId` ao componente `PlanningItemComments`
+### 3. Revisar itens pendentes no Planejamento
+- Verificar se o `PlanningListRow` esta navegando corretamente ao clicar (abrir dialog)
+- Confirmar que os status "publishing" e "failed" funcionam nas colunas do Kanban
 
-### 4. Ajustes no Diálogo
-- Passar `selectedClientId` do dialog para `PlanningItemComments` via nova prop `clientId`
+### 4. Verificar Automacoes e Performance
+- Checar se ha warnings ou erros visiveis nos componentes de automacoes e performance
+- Garantir consistencia visual (mesmos padroes de cards/tabelas)
 
-## Arquivos Modificados
-1. **`src/components/planning/PlanningItemComments.tsx`** -- MentionableInput + MentionRenderer
-2. **`src/hooks/usePlanningComments.ts`** -- Notificação de menção após insert
-3. **`src/components/planning/PlanningItemDialog.tsx`** -- Passar clientId para comments
+## Detalhes Tecnicos
+
+**Arquivo principal**: `src/components/kai/KaiSidebar.tsx`
+- Importar `NotificationBell` 
+- Inserir entre o bloco "Collapse Toggle" e o bloco "User" (linhas ~412-414)
+- Usar o mesmo pattern de `NavItem` para manter consistencia visual
+- Passar estado `collapsed` para ajustar layout
+
+**Arquivo secundario**: `src/components/notifications/NotificationBell.tsx`
+- Ajustar para aceitar prop opcional `variant="sidebar"` que muda o estilo do trigger (botao mais largo, texto ao lado)
+- Manter o Popover alinhado a `side="right"` quando usado na sidebar
+
+## Resultado
+O usuario tera acesso permanente as notificacoes no desktop via sidebar, com badge de contagem visivel. No mobile, continua funcionando pelo header como ja esta.
 
