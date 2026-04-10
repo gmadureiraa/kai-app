@@ -275,8 +275,7 @@ export function PlanningItemDialog({
       setColumnId(defaultColumnId || columns[0]?.id || '');
       setContentType('tweet');
       setPriority('medium');
-      setScheduledAt(defaultDate);
-      setScheduledAt(undefined);
+      setScheduledAt(defaultDate || undefined);
       setScheduledTime('09:00');
       setIsSchedulingToLate(false);
       setMediaItems([]);
@@ -536,7 +535,7 @@ export function PlanningItemDialog({
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="Título do conteúdo..."
                 disabled={readOnly}
-                className="flex-1 text-lg font-semibold bg-transparent border-none outline-none placeholder:text-muted-foreground/50 text-foreground"
+                className="flex-1 text-lg font-semibold bg-transparent border-none outline-none placeholder:text-muted-foreground/50 text-foreground border-b-2 border-transparent hover:border-border/40 focus:border-primary/50 transition-colors pb-1"
               />
               {readOnly && (
                 <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded">Somente leitura</span>
@@ -551,39 +550,42 @@ export function PlanningItemDialog({
           )}>
             {/* LEFT: Content area */}
             <div className="p-6 space-y-4 overflow-y-auto border-r border-border/30">
-              {/* Reference / AI generation */}
-              <div className="space-y-2 p-3 bg-muted/30 rounded-lg border border-dashed border-border/50">
-                <Label className="text-xs text-muted-foreground flex items-center gap-1.5">
-                  <Wand2 className="h-3 w-3" />
-                  Gerar a partir de... (link, @referência ou descrição)
-                </Label>
-                <div className="flex gap-2 items-end">
-                  <div className="flex-1">
-                    <MentionableInput
-                      value={referenceInput}
-                      onChange={setReferenceInput}
-                      clientId={selectedClientId}
-                      placeholder="Cole link, use @referência, ou descreva..."
-                      multiline
-                      rows={2}
-                    />
+              {/* Reference / AI generation - Collapsible */}
+              <details className="group">
+                <summary className="flex items-center gap-1.5 p-2.5 bg-muted/30 rounded-lg border border-dashed border-border/50 cursor-pointer hover:bg-muted/50 transition-colors text-xs text-muted-foreground font-medium select-none">
+                  <Wand2 className="h-3 w-3 shrink-0" />
+                  <span>Gerar com IA</span>
+                  <span className="ml-auto text-[10px] opacity-60 group-open:hidden">Clique para expandir</span>
+                </summary>
+                <div className="mt-2 p-3 bg-muted/30 rounded-lg border border-dashed border-border/50 space-y-2">
+                  <div className="flex gap-2 items-end">
+                    <div className="flex-1">
+                      <MentionableInput
+                        value={referenceInput}
+                        onChange={setReferenceInput}
+                        clientId={selectedClientId}
+                        placeholder="Cole link, use @referência, ou descreva..."
+                        multiline
+                        rows={2}
+                      />
+                    </div>
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={handleGenerateContent}
+                      disabled={!canGenerateContent || isGeneratingContent || isFetchingReference}
+                      className="shrink-0 gap-1.5 h-9"
+                    >
+                      {isGeneratingContent || isFetchingReference ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <Wand2 className="h-3.5 w-3.5" />
+                      )}
+                      {hasReference ? 'Gerar' : 'Escrever'}
+                    </Button>
                   </div>
-                  <Button
-                    type="button"
-                    size="sm"
-                    onClick={handleGenerateContent}
-                    disabled={!canGenerateContent || isGeneratingContent || isFetchingReference}
-                    className="shrink-0 gap-1.5 h-9"
-                  >
-                    {isGeneratingContent || isFetchingReference ? (
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    ) : (
-                      <Wand2 className="h-3.5 w-3.5" />
-                    )}
-                    {hasReference ? 'Gerar' : 'Escrever'}
-                  </Button>
                 </div>
-              </div>
+              </details>
 
               {/* Content Editor */}
               <div className="space-y-2">

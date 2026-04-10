@@ -85,7 +85,7 @@ export function PlanningFilters({ filters, onChange }: PlanningFiltersProps) {
         <SelectTrigger className={cn(
           "h-7 text-xs border-0 bg-transparent hover:bg-muted/50 focus:ring-0 focus:ring-offset-0 rounded-md",
           filters.clientId && filters.clientId !== '' && "text-foreground bg-muted/50",
-          inSheet ? "w-full border" : "w-[100px]"
+          inSheet ? "w-full border" : "w-[140px]"
         )}>
           <SelectValue placeholder="Perfil" />
         </SelectTrigger>
