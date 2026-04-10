@@ -25,7 +25,7 @@ export function ClickUpImportDialog({ open, onOpenChange, onImportComplete }: Cl
   const [clients, setClients] = useState<{ id: string; name: string }[]>([]);
   const [selectedLists, setSelectedLists] = useState<Map<string, ListMapping>>(new Map());
   const { teams, isDiscovering, isImporting, result, discover, importTasks } = useClickUpImport();
-  const { currentWorkspace } = useWorkspaceContext();
+  const { workspace } = useWorkspaceContext();
 
   useEffect(() => {
     if (open) {
