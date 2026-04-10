@@ -235,6 +235,19 @@ export function PlanningBoard({ clientId, isEnterprise = false, onClientChange }
               </TooltipTrigger>
               <TooltipContent>Automações</TooltipContent>
             </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button 
+                  variant="ghost" 
+                  size="icon"
+                  onClick={() => setShowClickUpImport(true)}
+                  className="h-8 w-8"
+                >
+                  <Upload className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Importar do ClickUp</TooltipContent>
+            </Tooltip>
             <ViewSettingsPopover settings={settings} onChange={setSettings} />
             <Tooltip>
               <TooltipTrigger asChild>
