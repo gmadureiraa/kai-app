@@ -62,7 +62,7 @@ export function PlanningItemComments({ planningItemId, clientId }: PlanningItemC
         )}
       </ScrollArea>
 
-      <form onSubmit={handleSubmit} className="flex gap-2 mt-4 pt-4 border-t items-end">
+      <div className="flex gap-2 mt-4 pt-4 border-t items-end">
         <div className="flex-1">
           <MentionableInput
             value={newComment}
@@ -73,14 +73,26 @@ export function PlanningItemComments({ planningItemId, clientId }: PlanningItemC
             disabled={isAdding}
           />
         </div>
-        <Button type="submit" size="icon" disabled={!newComment.trim() || isAdding} className="shrink-0">
+        <Button 
+          type="button" 
+          size="icon" 
+          disabled={!newComment.trim() || isAdding} 
+          className="shrink-0"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (!newComment.trim() || isAdding) return;
+            addComment(newComment.trim());
+            setNewComment("");
+          }}
+        >
           {isAdding ? (
             <Loader2 className="h-4 w-4 animate-spin" />
           ) : (
             <Send className="h-4 w-4" />
           )}
         </Button>
-      </form>
+      </div>
     </div>
   );
 }
