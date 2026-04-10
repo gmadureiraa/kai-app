@@ -360,7 +360,7 @@ Deno.serve(async (req) => {
       let updated = 0;
       let errors: string[] = [];
 
-      for (const item of items || []) {
+      for (const item of itemsToProcess) {
         const meta = item.metadata as any;
         if (!meta?.clickup_task_id) continue;
 
