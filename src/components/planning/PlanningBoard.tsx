@@ -11,6 +11,7 @@ import { usePlanningKeyboardShortcuts, getShortcutHint } from '@/hooks/usePlanni
 import { PlanningFilters as FiltersComponent } from './PlanningFilters';
 import { ViewToggle, type PlanningView } from './ViewToggle';
 import { PlanningItemCard } from './PlanningItemCard';
+import { PlanningListRow } from './PlanningListRow';
 import { PlanningItemDialog } from './PlanningItemDialog';
 import { KanbanView } from './KanbanView';
 import { CalendarView } from './CalendarView';
@@ -295,7 +296,7 @@ export function PlanningBoard({ clientId, isEnterprise = false, onClientChange }
         )}
 
         {view === 'list' && (
-          <div className="h-full overflow-y-auto space-y-2 pr-2">
+          <div className="h-full overflow-y-auto">
             {isEmpty ? (
               <EmptyState
                 type="list"
@@ -305,19 +306,31 @@ export function PlanningBoard({ clientId, isEnterprise = false, onClientChange }
                 }}
               />
             ) : (
-              items.map(item => (
-                <PlanningItemCard
-                  key={item.id}
-                  item={item}
-                  onEdit={handleEdit}
-                  onDelete={(id) => deleteItem.mutate(id)}
-                  onMoveToLibrary={(id) => moveToLibrary.mutate(id)}
-                  onRetry={(id) => retryPublication.mutate(id)}
-                  onDuplicate={handleDuplicate}
-                  compact={false}
-                  canDelete={!isViewer}
-                />
-              ))
+              <div className="border border-border/50 rounded-lg overflow-hidden bg-card">
+                {/* Table header */}
+                <div className="flex items-center gap-3 px-4 py-2 bg-muted/30 border-b border-border/50 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  <div className="w-5" />
+                  <div className="flex-1">Título</div>
+                  <div className="w-[100px] hidden lg:block">Cliente</div>
+                  <div className="w-[80px] hidden md:block">Redes</div>
+                  <div className="w-[90px] hidden sm:block">Data</div>
+                  <div className="w-[90px]">Status</div>
+                  <div className="w-6 hidden lg:block" />
+                  <div className="w-7" />
+                </div>
+                {items.map(item => (
+                  <PlanningListRow
+                    key={item.id}
+                    item={item}
+                    onEdit={handleEdit}
+                    onDelete={(id) => deleteItem.mutate(id)}
+                    onMoveToLibrary={(id) => moveToLibrary.mutate(id)}
+                    onRetry={(id) => retryPublication.mutate(id)}
+                    onDuplicate={handleDuplicate}
+                    canDelete={!isViewer}
+                  />
+                ))}
+              </div>
             )}
           </div>
         )}
