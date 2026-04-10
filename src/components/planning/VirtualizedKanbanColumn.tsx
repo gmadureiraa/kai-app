@@ -88,7 +88,7 @@ export const VirtualizedKanbanColumn = memo(function VirtualizedKanbanColumn({
       className={cn(
         "flex-shrink-0 bg-transparent rounded-lg flex flex-col",
         "transition-all duration-150",
-        !className && "w-72",
+        !className && "w-80",
         className,
         isDropTarget && "bg-primary/5"
       )}
