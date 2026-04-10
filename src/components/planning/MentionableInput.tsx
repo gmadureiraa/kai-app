@@ -106,28 +106,31 @@ export function MentionableInput({
   }, [value, onChange, mentionStartPosition, cursorPosition]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (!showPopover || items.length === 0) return;
-
-    switch (e.key) {
-      case 'ArrowDown':
-        e.preventDefault();
-        setSelectedIndex(prev => (prev + 1) % items.length);
-        break;
-      case 'ArrowUp':
-        e.preventDefault();
-        setSelectedIndex(prev => (prev - 1 + items.length) % items.length);
-        break;
-      case 'Enter':
-        e.preventDefault();
-        if (items[selectedIndex]) {
-          insertMention(items[selectedIndex]);
-        }
-        break;
-      case 'Escape':
-        e.preventDefault();
-        setShowPopover(false);
-        break;
+    if (showPopover && items.length > 0) {
+      switch (e.key) {
+        case 'ArrowDown':
+          e.preventDefault();
+          setSelectedIndex(prev => (prev + 1) % items.length);
+          return;
+        case 'ArrowUp':
+          e.preventDefault();
+          setSelectedIndex(prev => (prev - 1 + items.length) % items.length);
+          return;
+        case 'Enter':
+          e.preventDefault();
+          e.stopPropagation();
+          if (items[selectedIndex]) {
+            insertMention(items[selectedIndex]);
+          }
+          return;
+        case 'Escape':
+          e.preventDefault();
+          setShowPopover(false);
+          return;
+      }
     }
+
+    // For single-line mode, Enter submits the parent form — don't interfere
   };
 
   const getItemIcon = (item: MentionItem) => {

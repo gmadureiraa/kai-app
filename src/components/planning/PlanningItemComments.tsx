@@ -22,7 +22,8 @@ export function PlanningItemComments({ planningItemId, clientId }: PlanningItemC
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newComment.trim()) return;
+    e.stopPropagation();
+    if (!newComment.trim() || isAdding) return;
     
     addComment(newComment.trim());
     setNewComment("");
