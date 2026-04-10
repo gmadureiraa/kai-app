@@ -109,14 +109,13 @@ Deno.serve(async (req) => {
       { global: { headers: { Authorization: authHeader } } }
     );
 
-    const token = authHeader.replace("Bearer ", "");
-    const { data: claimsData, error: claimsError } = await supabase.auth.getClaims(token);
-    if (claimsError || !claimsData?.claims) {
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError || !user) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    const userId = claimsData.claims.sub as string;
+    const userId = user.id;
 
     const url = new URL(req.url);
     const action = url.searchParams.get("action");
@@ -192,10 +191,19 @@ Deno.serve(async (req) => {
       let skipped = 0;
       let errors: string[] = [];
 
-      const serviceSupabase = createClient(
-        Deno.env.get("SUPABASE_URL")!,
-        Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-      );
+      // Pre-fetch all existing clickup_task_ids for dedup
+      const { data: existingItems } = await supabase
+        .from("planning_items")
+        .select("metadata")
+        .eq("workspace_id", workspace_id)
+        .not("metadata", "is", null);
+      
+      const existingTaskIds = new Set<string>();
+      for (const item of existingItems || []) {
+        const meta = item.metadata as any;
+        if (meta?.clickup_task_id) existingTaskIds.add(meta.clickup_task_id);
+      }
+
 
       for (const mapping of mappings) {
         let page = 0;
@@ -216,15 +224,7 @@ Deno.serve(async (req) => {
 
             for (const task of tasks) {
               try {
-                // Check dedup
-                const { data: existing } = await supabase
-                  .from("planning_items")
-                  .select("id")
-                  .eq("workspace_id", workspace_id)
-                  .contains("metadata", { clickup_task_id: task.id })
-                  .maybeSingle();
-
-                if (existing) {
+                if (existingTaskIds.has(task.id)) {
                   skipped++;
                   continue;
                 }
@@ -238,38 +238,8 @@ Deno.serve(async (req) => {
                 const statusColumnType = mapStatusToColumnType(task.status.status);
                 const columnId = columnMap.get(statusColumnType) || columnMap.get("idea") || null;
 
-                // Handle attachments
+                // Skip attachment downloads for speed - store clickup attachment URLs in metadata
                 let mediaUrls: string[] = [];
-                try {
-                  const attachRes = await clickupFetch(`/task/${task.id}?include_subtasks=false`, CLICKUP_TOKEN);
-                  const attachments = attachRes.attachments || [];
-                  
-                  for (const att of attachments.slice(0, 10)) {
-                    try {
-                      const imgRes = await fetch(att.url);
-                      if (imgRes.ok) {
-                        const blob = await imgRes.blob();
-                        const ext = att.extension || "jpg";
-                        const path = `clickup/${workspace_id}/${task.id}/${att.id}.${ext}`;
-                        
-                        const { error: uploadErr } = await serviceSupabase.storage
-                          .from("planning-media")
-                          .upload(path, blob, { contentType: blob.type, upsert: true });
-                        
-                        if (!uploadErr) {
-                          const { data: urlData } = serviceSupabase.storage
-                            .from("planning-media")
-                            .getPublicUrl(path);
-                          if (urlData?.publicUrl) mediaUrls.push(urlData.publicUrl);
-                        }
-                      }
-                    } catch {
-                      // Fallback: save original URL in metadata
-                    }
-                  }
-                } catch {
-                  // Skip attachments on error
-                }
 
                 // Parse dates
                 let scheduledAt: string | null = null;
