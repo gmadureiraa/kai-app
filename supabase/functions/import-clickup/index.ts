@@ -237,38 +237,8 @@ Deno.serve(async (req) => {
                 const statusColumnType = mapStatusToColumnType(task.status.status);
                 const columnId = columnMap.get(statusColumnType) || columnMap.get("idea") || null;
 
-                // Handle attachments
+                // Skip attachment downloads for speed - store clickup attachment URLs in metadata
                 let mediaUrls: string[] = [];
-                try {
-                  const attachRes = await clickupFetch(`/task/${task.id}?include_subtasks=false`, CLICKUP_TOKEN);
-                  const attachments = attachRes.attachments || [];
-                  
-                  for (const att of attachments.slice(0, 10)) {
-                    try {
-                      const imgRes = await fetch(att.url);
-                      if (imgRes.ok) {
-                        const blob = await imgRes.blob();
-                        const ext = att.extension || "jpg";
-                        const path = `clickup/${workspace_id}/${task.id}/${att.id}.${ext}`;
-                        
-                        const { error: uploadErr } = await serviceSupabase.storage
-                          .from("planning-media")
-                          .upload(path, blob, { contentType: blob.type, upsert: true });
-                        
-                        if (!uploadErr) {
-                          const { data: urlData } = serviceSupabase.storage
-                            .from("planning-media")
-                            .getPublicUrl(path);
-                          if (urlData?.publicUrl) mediaUrls.push(urlData.publicUrl);
-                        }
-                      }
-                    } catch {
-                      // Fallback: save original URL in metadata
-                    }
-                  }
-                } catch {
-                  // Skip attachments on error
-                }
 
                 // Parse dates
                 let scheduledAt: string | null = null;
