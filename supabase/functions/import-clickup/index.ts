@@ -224,15 +224,7 @@ Deno.serve(async (req) => {
 
             for (const task of tasks) {
               try {
-                // Check dedup
-                const { data: existing } = await supabase
-                  .from("planning_items")
-                  .select("id")
-                  .eq("workspace_id", workspace_id)
-                  .contains("metadata", { clickup_task_id: task.id })
-                  .maybeSingle();
-
-                if (existing) {
+                if (existingTaskIds.has(task.id)) {
                   skipped++;
                   continue;
                 }
