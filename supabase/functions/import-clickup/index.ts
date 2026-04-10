@@ -349,8 +349,13 @@ Deno.serve(async (req) => {
         .select("id, metadata, media_urls")
         .eq("workspace_id", workspace_id)
         .not("metadata", "is", null)
-        .or("media_urls.is.null,media_urls.eq.{}")
         .limit(limit);
+      
+      // Filter client-side for items with empty media_urls
+      const itemsToProcess = (items || []).filter((item: any) => {
+        const urls = item.media_urls;
+        return !urls || (Array.isArray(urls) && urls.length === 0);
+      });
 
       let updated = 0;
       let errors: string[] = [];
