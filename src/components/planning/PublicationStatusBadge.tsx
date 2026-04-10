@@ -43,7 +43,7 @@ export function PublicationStatusBadge({
     return (
       <Tooltip>
         <TooltipTrigger asChild>
-          <div className="flex items-center gap-1">
+          <span>
             <Badge 
               variant="destructive" 
               className={cn(
@@ -74,7 +74,7 @@ export function PublicationStatusBadge({
                 <RefreshCw className="h-3 w-3" />
               </Button>
             )}
-          </div>
+          </span>
         </TooltipTrigger>
         <TooltipContent side="top" className="max-w-xs">
           <div className="space-y-1">
