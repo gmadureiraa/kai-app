@@ -43,13 +43,12 @@ export default function Kai() {
   // Route protection: redirect to allowed tabs if trying to access unauthorized ones
   useEffect(() => {
     let shouldRedirect = false;
-    let redirectTab = "canvas"; // Default for Canvas plan users
+    let redirectTab = "planning"; // Default redirect
     
     // Removed tabs - redirect if accessing them
-    const removedTabs = ["agent-builder", "research-lab", "knowledge-base", "team", "account", "templates", "format-rules", "repurpose"];
+    const removedTabs = ["agent-builder", "research-lab", "knowledge-base", "team", "account", "templates", "format-rules", "repurpose", "canvas"];
     if (removedTabs.includes(tab)) {
       shouldRedirect = true;
-      redirectTab = "canvas"; // Redirect to canvas instead
     }
     
     // Viewer-blocked tabs
@@ -57,7 +56,7 @@ export default function Kai() {
       const blockedTabs = ["home", "repurpose"];
       if (blockedTabs.includes(tab)) {
         shouldRedirect = true;
-        redirectTab = "canvas";
+        redirectTab = "planning";
       }
     }
     
@@ -114,8 +113,7 @@ export default function Kai() {
   const handleSendMessage = (content: string, contentType?: string) => {
     setPendingMessage(content);
     setPendingContentType(contentType || null);
-    // No longer redirect to assistant tab - use floating button instead
-    handleTabChange("canvas");
+    handleTabChange("planning");
   };
 
   const handleQuickAction = (action: string) => {
@@ -132,16 +130,10 @@ export default function Kai() {
     }
 
     // Tools that don't need client
-    const toolTabs = ["canvas", "clients", "settings", "automations", "assistant", "analytics"];
+    const toolTabs = ["clients", "settings", "automations", "assistant", "analytics"];
     
     if (toolTabs.includes(tab)) {
       switch (tab) {
-        case "canvas":
-          return (
-            <div className="h-full overflow-hidden">
-              <ContentCanvas clientId={clientId || ""} />
-            </div>
-          );
         case "clients":
           return <ClientsManagementTool />;
         case "settings":

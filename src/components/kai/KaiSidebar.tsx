@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { 
-  Palette, 
   BarChart3, 
   CalendarDays,
   ChevronDown,
@@ -16,8 +15,6 @@ import {
   Zap,
   Lock,
   MessageSquare,
-  MessageCircle,
-  LineChart,
 } from "lucide-react";
 import { useDevAccess } from "@/hooks/useDevAccess";
 import { cn } from "@/lib/utils";
@@ -276,17 +273,6 @@ export function KaiSidebar({
 
       {/* Navigation */}
       <nav className="flex-1 px-2 space-y-1 overflow-y-auto scrollbar-hide">
-        {/* Canvas - Bloqueado para Viewers */}
-        <NavItem
-          icon={<Palette className="h-4 w-4" strokeWidth={1.5} />}
-          label="Canvas"
-          active={activeTab === "canvas"}
-          onClick={() => isViewer ? showPermissionMessage() : onTabChange("canvas")}
-          collapsed={collapsed}
-          disabled={isViewer}
-          showLock={isViewer}
-        />
-
         {/* kAI Chat - Bloqueado para Viewers */}
         <NavItem
           icon={<MessageSquare className="h-4 w-4" strokeWidth={1.5} />}
