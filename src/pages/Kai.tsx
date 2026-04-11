@@ -130,10 +130,17 @@ export default function Kai() {
     }
 
     // Tools that don't need client
-    const toolTabs = ["clients", "settings", "automations", "assistant", "analytics"];
+    const toolTabs = ["clients", "settings", "automations", "assistant", "analytics", "home"];
     
     if (toolTabs.includes(tab)) {
       switch (tab) {
+        case "home":
+          return (
+            <HomeDashboard 
+              onNavigate={handleTabChange}
+              selectedClientId={selectedClient?.id}
+            />
+          );
         case "clients":
           return <ClientsManagementTool />;
         case "settings":
