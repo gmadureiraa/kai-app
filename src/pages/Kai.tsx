@@ -63,13 +63,13 @@ export default function Kai() {
     // Home requires canViewHome
     if (tab === "home" && !canViewHome) {
       shouldRedirect = true;
-      redirectTab = "canvas";
+      redirectTab = "planning";
     }
     
     // Repurpose requires canViewRepurpose
     if (tab === "repurpose" && !canViewRepurpose) {
       shouldRedirect = true;
-      redirectTab = "canvas";
+      redirectTab = "planning";
     }
     
     // Admin tabs require specific permissions

@@ -58,6 +58,12 @@ export function useOnboarding() {
         return;
       }
 
+      // If already completed, skip all checks
+      if (state.hasCompletedOnboarding) {
+        setIsLoading(false);
+        return;
+      }
+
       try {
         // Check if user owns any workspace
         const { data: workspaces } = await supabase
@@ -69,8 +75,24 @@ export function useOnboarding() {
         const isOwner = workspaces && workspaces.length > 0;
         setIsWorkspaceOwner(isOwner);
 
+        // Check if user already has clients (existing user, skip onboarding)
+        const { data: clients } = await supabase
+          .from("clients")
+          .select("id")
+          .limit(1);
+
+        if (clients && clients.length > 0) {
+          // User already has clients — mark onboarding as complete
+          setState((prev) => ({
+            ...prev,
+            hasCompletedOnboarding: true,
+          }));
+          setIsLoading(false);
+          return;
+        }
+
         // If onboarding not completed and we don't know the type yet, determine it
-        if (!state.hasCompletedOnboarding && !state.onboardingType) {
+        if (!state.onboardingType) {
           setState((prev) => ({
             ...prev,
             onboardingType: isOwner ? "new_workspace" : "joining_workspace",

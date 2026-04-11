@@ -340,24 +340,6 @@ export function KaiSidebar({
 
       {/* Footer */}
       <div className={cn("p-2 space-y-1", collapsed && "p-1.5")}>
-        {/* Theme Toggle */}
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-          className={cn(
-            "w-full flex items-center gap-3 justify-start text-muted-foreground hover:text-foreground",
-            collapsed && "justify-center px-2"
-          )}
-        >
-          {theme === "dark" ? (
-            <Sun className="h-4 w-4" strokeWidth={1.5} />
-          ) : (
-            <Moon className="h-4 w-4" strokeWidth={1.5} />
-          )}
-          {!collapsed && <span className="text-sm">Tema</span>}
-        </Button>
-
         {/* Settings */}
         {canViewSettings && (
           <Button
