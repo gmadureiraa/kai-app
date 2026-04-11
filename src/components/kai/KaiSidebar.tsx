@@ -272,6 +272,15 @@ export function KaiSidebar({
 
       {/* Navigation */}
       <nav className="flex-1 px-2 space-y-1 overflow-y-auto scrollbar-hide">
+        {/* Home Dashboard */}
+        <NavItem
+          icon={<Home className="h-4 w-4" strokeWidth={1.5} />}
+          label="Início"
+          active={activeTab === "home"}
+          onClick={() => onTabChange("home")}
+          collapsed={collapsed}
+        />
+
         {/* kAI Chat - Bloqueado para Viewers */}
         <NavItem
           icon={<MessageSquare className="h-4 w-4" strokeWidth={1.5} />}
