@@ -335,7 +335,7 @@ export function HomeDashboard({ onNavigate, onOpenItem, selectedClientId }: Home
             variant="outline"
             size="sm"
             className="gap-1.5 hidden md:flex"
-            onClick={() => onNavigate("planning")}
+            onClick={() => onOpenItem?.(item.id)}
           >
             <CalendarDays className="h-3.5 w-3.5" />
             Ver planejamento
@@ -486,7 +486,7 @@ export function HomeDashboard({ onNavigate, onOpenItem, selectedClientId }: Home
                         <div
                           key={item.id}
                           className="flex items-center gap-3 py-2.5 px-1 hover:bg-muted/20 rounded-md transition-colors cursor-pointer -mx-1"
-                          onClick={() => onNavigate("planning")}
+                          onClick={() => onOpenItem?.(item.id)}
                         >
                           <div
                             className={cn(
@@ -567,7 +567,7 @@ export function HomeDashboard({ onNavigate, onOpenItem, selectedClientId }: Home
                     <div
                       key={item.id}
                       className="flex items-center gap-3 p-2 rounded-md hover:bg-destructive/5 transition-colors cursor-pointer"
-                      onClick={() => onNavigate("planning")}
+                      onClick={() => onOpenItem?.(item.id)}
                     >
                       <div className="w-1.5 h-1.5 rounded-full bg-destructive shrink-0" />
                       <div className="flex-1 min-w-0">
@@ -637,7 +637,7 @@ export function HomeDashboard({ onNavigate, onOpenItem, selectedClientId }: Home
                       <div
                         key={item.id}
                         className="flex items-center gap-3 p-2 rounded-md hover:bg-muted/30 transition-colors cursor-pointer group"
-                        onClick={() => onNavigate("planning")}
+                        onClick={() => onOpenItem?.(item.id)}
                       >
                         <div
                           className={cn(
@@ -973,7 +973,7 @@ export function HomeDashboard({ onNavigate, onOpenItem, selectedClientId }: Home
                                     "flex items-center gap-1.5 px-1.5 py-1 rounded text-[11px] cursor-pointer transition-colors",
                                     "hover:bg-muted/30"
                                   )}
-                                  onClick={() => onNavigate("planning")}
+                                  onClick={() => onOpenItem?.(item.id)}
                                 >
                                   <div
                                     className={cn(
