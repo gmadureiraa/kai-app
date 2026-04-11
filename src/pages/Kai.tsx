@@ -5,17 +5,12 @@ import { MobileHeader } from "@/components/kai/MobileHeader";
 import { HomeDashboard } from "@/components/kai/home/HomeDashboard";
 import { KaiPerformanceTab } from "@/components/kai/KaiPerformanceTab";
 import { KaiLibraryTab } from "@/components/kai/KaiLibraryTab";
-
 import { KaiAssistantTab } from "@/components/kai/KaiAssistantTab";
 import { KaiAnalyticsTab } from "@/components/kai/KaiAnalyticsTab";
-
 import { ClientsManagementTool } from "@/components/kai/tools/ClientsManagementTool";
-import { ContentCanvas } from "@/components/kai/canvas/ContentCanvas"; // kept for potential deep-links
 import { PlanningBoard } from "@/components/planning/PlanningBoard";
 import { SettingsTab } from "@/components/settings/SettingsTab";
 import { AutomationsTab } from "@/components/automations/AutomationsTab";
-
-
 import { OnboardingFlow } from "@/components/onboarding";
 import { NotificationPermissionPrompt } from "@/components/notifications/NotificationPermissionPrompt";
 import { useClients } from "@/hooks/useClients";
@@ -28,15 +23,13 @@ import { Sheet, SheetContent } from "@/components/ui/sheet";
 export default function Kai() {
   const [searchParams, setSearchParams] = useSearchParams();
   const clientId = searchParams.get("client");
-  const tab = searchParams.get("tab") || "planning";
+  const tab = searchParams.get("tab") || "home";
   const isMobile = useIsMobile();
   
   const { clients, isLoading: isLoadingClients } = useClients();
   const { canManageTeam, canViewPerformance, canViewClients, canViewHome, canViewRepurpose, isViewer } = useWorkspace();
   const selectedClient = clients?.find(c => c.id === clientId);
   
-  const [pendingMessage, setPendingMessage] = useState<string | null>(null);
-  const [pendingContentType, setPendingContentType] = useState<string | null>(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
