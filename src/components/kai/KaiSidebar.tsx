@@ -35,7 +35,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { supabase } from "@/integrations/supabase/client";
 import { ClientDialog } from "@/components/clients/ClientDialog";
 import { useQuery } from "@tanstack/react-query";
-import { useTheme } from "next-themes";
+
 import { toast } from "sonner";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 
@@ -126,7 +126,7 @@ export function KaiSidebar({
   } = useWorkspace();
   
   const { user } = useAuth();
-  const { theme, setTheme } = useTheme();
+  
   const { hasDevAccess } = useDevAccess();
   const selectedClient = clients?.find(c => c.id === selectedClientId);
   const [showClientDialog, setShowClientDialog] = useState(false);
