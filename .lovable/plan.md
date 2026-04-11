@@ -1,45 +1,78 @@
 
 
-# Plano: Dashboard de Custos de IA nas Configurações
+# Avaliação do Kai + Oportunidades de Melhoria
 
-## Dados Atuais
+## Pontuação Geral: 8/10
 
-O sistema tem **606 logs de uso** desde Dez/2025, mas **nenhum está associado a um client_id** — todos são NULL. O custo total acumulado é ~**R$ 24.50** (~$4.30 USD), distribuído assim:
+O Kai é uma ferramenta **completa e funcional** para gestão de conteúdo multi-cliente. Cobre o ciclo inteiro: planejamento → criação com IA → revisão → publicação → métricas. Poucas ferramentas no mercado oferecem isso integrado.
 
-| Função | Chamadas | Custo (R$) |
-|--------|----------|------------|
-| Multi-agent Writer | 72 | R$ 10.53 |
-| Multi-agent Editor | 58 | R$ 7.74 |
-| Multi-agent Researcher | 61 | R$ 1.61 |
-| Chat response | 146 | R$ 0.98 |
-| CSV validation | 39 | R$ 1.16 |
-| Geração de imagem | 17 | R$ 0.49 |
-| Outros | ~170 | R$ 1.99 |
-| **Total** | **606** | **~R$ 24.50** |
+---
 
-## O que será feito
+## Pontos Fortes
+- Pipeline editorial completo (2.100+ items, 11 clientes)
+- Chat IA contextual com conhecimento do cliente
+- 70+ Edge Functions cobrindo todo o backend
+- Publicação direta multi-plataforma
+- Automações e recorrência
+- Workspace multi-team com permissões
 
-### 1. Nova seção "Uso de IA" nas Configurações
-Adicionar tab "Uso de IA" no `SettingsNavigation.tsx` com:
-- **Resumo geral**: custo total do mês, chamadas totais, tokens consumidos
-- **Breakdown por função**: tabela com chat, geração de conteúdo, imagens, CSV, etc.
-- **Breakdown por modelo**: gemini-2.5-flash vs pro vs lite
-- **Gráfico de evolução mensal**: barras ou linha mostrando custo/mês
-- **Projeção**: baseado no uso dos últimos 30 dias, projetar custo mensal
+## Gaps e Oportunidades de Melhoria
 
-### 2. Associar client_id nos logs futuros
-Atualizar o `kai-simple-chat` edge function para salvar `client_id` no `ai_usage_logs` quando o chat está no contexto de um cliente. Isso permitirá breakdown por cliente no futuro.
+### 1. Dashboard Home / Visão Geral (ALTO IMPACTO)
+Hoje o "Home" é só um hero com input. Falta um **dashboard operacional** mostrando:
+- Cards vencidos / para hoje / esta semana
+- Status por cliente (quantos items pendentes)
+- Últimas publicações e performance rápida
+- Atividade recente do time
 
-### 3. Componente `AIUsageSettings.tsx`
-Novo componente com:
-- Cards de KPI no topo (custo total mês, chamadas, tokens, projeção)
-- Tabela detalhada por edge_function com custo em BRL e USD
-- Tabela por modelo
-- Histórico mensal (últimos 6 meses)
+### 2. Fluxo de Aprovação Estruturado (ALTO IMPACTO)
+O status "review" existe mas não há um fluxo de aprovação real:
+- Notificação para aprovador quando item entra em revisão
+- Botões "Aprovar" / "Pedir ajustes" com comentário
+- Histórico de aprovações
+- Aprovação por cliente externo (link público)
 
-## Arquivos a criar/modificar
-1. **`src/components/settings/AIUsageSettings.tsx`** — Novo componente com dashboard de custos
-2. **`src/components/settings/SettingsNavigation.tsx`** — Adicionar seção "Uso de IA"
-3. **`src/components/settings/SettingsTab.tsx`** — Renderizar nova seção
-4. **`supabase/functions/kai-simple-chat/index.ts`** — Passar client_id ao logAIUsage
+### 3. Relatórios e Exportação (MÉDIO IMPACTO)
+- Relatório mensal automático por cliente (PDF/apresentação)
+- Export de calendário editorial
+- Relatório de produtividade do time
+
+### 4. Melhoria no Onboarding
+O modal de onboarding aparece mesmo para usuários existentes (como vi no screenshot). Precisa:
+- Verificar se usuário já completou onboarding
+- Não mostrar para admins que já têm clientes
+
+### 5. Templates de Conteúdo Reutilizáveis
+- Salvar prompts/conteúdos que funcionaram como templates
+- Biblioteca de templates por formato e nicho
+- "Usar como base" a partir de posts com alta performance
+
+### 6. Refinamentos de UX
+- O sidebar tem "Tema" como item solto — integrar nas Configurações
+- Ledger aparece como cliente selecionado mas tem 0 items
+- Redirect de tabs removidas ainda aponta para "canvas" em alguns lugares (linhas 66-67, 72-73 do Kai.tsx)
+
+### 7. Métricas Comparativas
+- Benchmark entre clientes
+- Evolução mês a mês por cliente
+- ROI estimado (custo IA vs engagement gerado)
+
+---
+
+## O que eu recomendo priorizar
+
+| Prioridade | Item | Esforço |
+|------------|------|---------|
+| 1 | Dashboard Home operacional | Médio |
+| 2 | Corrigir bugs (onboarding, redirects, Tema solto) | Baixo |
+| 3 | Fluxo de aprovação | Médio |
+| 4 | Relatório mensal por cliente | Médio |
+| 5 | Templates reutilizáveis | Baixo |
+
+## Arquivos afetados (se aprovar)
+1. `src/components/kai/GradientHero.tsx` → Transformar em dashboard operacional
+2. `src/pages/Kai.tsx` → Corrigir redirects (linhas 66-67, 72-73)
+3. `src/components/onboarding/` → Adicionar check de conclusão
+4. `src/components/kai/KaiSidebar.tsx` → Remover "Tema" como item separado
+5. Novos componentes para aprovação e relatórios
 
