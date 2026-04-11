@@ -8,13 +8,12 @@ import {
   ChevronRight,
   Building2,
   Plus,
-  Moon,
-  Sun,
   Library,
   Settings,
   Zap,
   Lock,
   MessageSquare,
+  Home,
 } from "lucide-react";
 import { useDevAccess } from "@/hooks/useDevAccess";
 import { cn } from "@/lib/utils";
