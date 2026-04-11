@@ -10,7 +10,7 @@ import { KaiAssistantTab } from "@/components/kai/KaiAssistantTab";
 import { KaiAnalyticsTab } from "@/components/kai/KaiAnalyticsTab";
 
 import { ClientsManagementTool } from "@/components/kai/tools/ClientsManagementTool";
-import { ContentCanvas } from "@/components/kai/canvas/ContentCanvas";
+import { ContentCanvas } from "@/components/kai/canvas/ContentCanvas"; // kept for potential deep-links
 import { PlanningBoard } from "@/components/planning/PlanningBoard";
 import { SettingsTab } from "@/components/settings/SettingsTab";
 import { AutomationsTab } from "@/components/automations/AutomationsTab";
@@ -28,7 +28,7 @@ import { Sheet, SheetContent } from "@/components/ui/sheet";
 export default function Kai() {
   const [searchParams, setSearchParams] = useSearchParams();
   const clientId = searchParams.get("client");
-  const tab = searchParams.get("tab") || "home";
+  const tab = searchParams.get("tab") || "planning";
   const isMobile = useIsMobile();
   
   const { clients, isLoading: isLoadingClients } = useClients();
