@@ -2,20 +2,15 @@ import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { KaiSidebar } from "@/components/kai/KaiSidebar";
 import { MobileHeader } from "@/components/kai/MobileHeader";
-import { GradientHero } from "@/components/kai/GradientHero";
+import { HomeDashboard } from "@/components/kai/home/HomeDashboard";
 import { KaiPerformanceTab } from "@/components/kai/KaiPerformanceTab";
 import { KaiLibraryTab } from "@/components/kai/KaiLibraryTab";
-
 import { KaiAssistantTab } from "@/components/kai/KaiAssistantTab";
 import { KaiAnalyticsTab } from "@/components/kai/KaiAnalyticsTab";
-
 import { ClientsManagementTool } from "@/components/kai/tools/ClientsManagementTool";
-import { ContentCanvas } from "@/components/kai/canvas/ContentCanvas"; // kept for potential deep-links
 import { PlanningBoard } from "@/components/planning/PlanningBoard";
 import { SettingsTab } from "@/components/settings/SettingsTab";
 import { AutomationsTab } from "@/components/automations/AutomationsTab";
-
-
 import { OnboardingFlow } from "@/components/onboarding";
 import { NotificationPermissionPrompt } from "@/components/notifications/NotificationPermissionPrompt";
 import { useClients } from "@/hooks/useClients";
@@ -28,15 +23,13 @@ import { Sheet, SheetContent } from "@/components/ui/sheet";
 export default function Kai() {
   const [searchParams, setSearchParams] = useSearchParams();
   const clientId = searchParams.get("client");
-  const tab = searchParams.get("tab") || "planning";
+  const tab = searchParams.get("tab") || "home";
   const isMobile = useIsMobile();
   
   const { clients, isLoading: isLoadingClients } = useClients();
   const { canManageTeam, canViewPerformance, canViewClients, canViewHome, canViewRepurpose, isViewer } = useWorkspace();
   const selectedClient = clients?.find(c => c.id === clientId);
   
-  const [pendingMessage, setPendingMessage] = useState<string | null>(null);
-  const [pendingContentType, setPendingContentType] = useState<string | null>(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -63,13 +56,13 @@ export default function Kai() {
     // Home requires canViewHome
     if (tab === "home" && !canViewHome) {
       shouldRedirect = true;
-      redirectTab = "canvas";
+      redirectTab = "planning";
     }
     
     // Repurpose requires canViewRepurpose
     if (tab === "repurpose" && !canViewRepurpose) {
       shouldRedirect = true;
-      redirectTab = "canvas";
+      redirectTab = "planning";
     }
     
     // Admin tabs require specific permissions
@@ -110,15 +103,6 @@ export default function Kai() {
     }
   }, [clientId, clients]);
 
-  const handleSendMessage = (content: string, contentType?: string) => {
-    setPendingMessage(content);
-    setPendingContentType(contentType || null);
-    handleTabChange("planning");
-  };
-
-  const handleQuickAction = (action: string) => {
-    handleTabChange(action);
-  };
 
   const renderContent = () => {
     if (isLoadingClients) {
@@ -130,10 +114,17 @@ export default function Kai() {
     }
 
     // Tools that don't need client
-    const toolTabs = ["clients", "settings", "automations", "assistant", "analytics"];
+    const toolTabs = ["clients", "settings", "automations", "assistant", "analytics", "home"];
     
     if (toolTabs.includes(tab)) {
       switch (tab) {
+        case "home":
+          return (
+            <HomeDashboard 
+              onNavigate={handleTabChange}
+              selectedClientId={selectedClient?.id}
+            />
+          );
         case "clients":
           return <ClientsManagementTool />;
         case "settings":
@@ -192,16 +183,6 @@ export default function Kai() {
     }
 
     switch (tab) {
-      case "home":
-        return (
-          <GradientHero 
-            onSubmit={handleSendMessage}
-            onQuickAction={handleQuickAction}
-            clientName={selectedClient.name}
-            clientId={selectedClient.id}
-          />
-        );
-      
       case "performance":
         return (
           <div className={cn("overflow-auto h-full", isMobile ? "p-3" : "p-6")}>
@@ -218,10 +199,9 @@ export default function Kai() {
       
       default:
         return (
-          <GradientHero 
-            onSubmit={handleSendMessage}
-            onQuickAction={handleQuickAction}
-            clientName={selectedClient.name}
+          <HomeDashboard 
+            onNavigate={handleTabChange}
+            selectedClientId={selectedClient?.id}
           />
         );
     }

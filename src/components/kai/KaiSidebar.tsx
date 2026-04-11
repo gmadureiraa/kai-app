@@ -8,13 +8,12 @@ import {
   ChevronRight,
   Building2,
   Plus,
-  Moon,
-  Sun,
   Library,
   Settings,
   Zap,
   Lock,
   MessageSquare,
+  Home,
 } from "lucide-react";
 import { useDevAccess } from "@/hooks/useDevAccess";
 import { cn } from "@/lib/utils";
@@ -36,7 +35,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { supabase } from "@/integrations/supabase/client";
 import { ClientDialog } from "@/components/clients/ClientDialog";
 import { useQuery } from "@tanstack/react-query";
-import { useTheme } from "next-themes";
+
 import { toast } from "sonner";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 
@@ -127,7 +126,7 @@ export function KaiSidebar({
   } = useWorkspace();
   
   const { user } = useAuth();
-  const { theme, setTheme } = useTheme();
+  
   const { hasDevAccess } = useDevAccess();
   const selectedClient = clients?.find(c => c.id === selectedClientId);
   const [showClientDialog, setShowClientDialog] = useState(false);
@@ -273,6 +272,15 @@ export function KaiSidebar({
 
       {/* Navigation */}
       <nav className="flex-1 px-2 space-y-1 overflow-y-auto scrollbar-hide">
+        {/* Home Dashboard */}
+        <NavItem
+          icon={<Home className="h-4 w-4" strokeWidth={1.5} />}
+          label="Início"
+          active={activeTab === "home"}
+          onClick={() => onTabChange("home")}
+          collapsed={collapsed}
+        />
+
         {/* kAI Chat - Bloqueado para Viewers */}
         <NavItem
           icon={<MessageSquare className="h-4 w-4" strokeWidth={1.5} />}
@@ -340,24 +348,6 @@ export function KaiSidebar({
 
       {/* Footer */}
       <div className={cn("p-2 space-y-1", collapsed && "p-1.5")}>
-        {/* Theme Toggle */}
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-          className={cn(
-            "w-full flex items-center gap-3 justify-start text-muted-foreground hover:text-foreground",
-            collapsed && "justify-center px-2"
-          )}
-        >
-          {theme === "dark" ? (
-            <Sun className="h-4 w-4" strokeWidth={1.5} />
-          ) : (
-            <Moon className="h-4 w-4" strokeWidth={1.5} />
-          )}
-          {!collapsed && <span className="text-sm">Tema</span>}
-        </Button>
-
         {/* Settings */}
         {canViewSettings && (
           <Button
