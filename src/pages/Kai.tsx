@@ -199,14 +199,6 @@ export default function Kai() {
     }
 
     switch (tab) {
-      case "home":
-        return (
-          <HomeDashboard 
-            onNavigate={handleTabChange}
-            selectedClientId={selectedClient?.id}
-          />
-        );
-      
       case "performance":
         return (
           <div className={cn("overflow-auto h-full", isMobile ? "p-3" : "p-6")}>
