@@ -437,15 +437,11 @@ export type Database = {
       }
       client_social_credentials: {
         Row: {
-          access_token: string | null
           access_token_encrypted: string | null
-          access_token_secret: string | null
           access_token_secret_encrypted: string | null
           account_id: string | null
           account_name: string | null
-          api_key: string | null
           api_key_encrypted: string | null
-          api_secret: string | null
           api_secret_encrypted: string | null
           client_id: string
           created_at: string
@@ -454,24 +450,18 @@ export type Database = {
           is_valid: boolean | null
           last_validated_at: string | null
           metadata: Json | null
-          oauth_access_token: string | null
           oauth_access_token_encrypted: string | null
-          oauth_refresh_token: string | null
           oauth_refresh_token_encrypted: string | null
           platform: string
           updated_at: string
           validation_error: string | null
         }
         Insert: {
-          access_token?: string | null
           access_token_encrypted?: string | null
-          access_token_secret?: string | null
           access_token_secret_encrypted?: string | null
           account_id?: string | null
           account_name?: string | null
-          api_key?: string | null
           api_key_encrypted?: string | null
-          api_secret?: string | null
           api_secret_encrypted?: string | null
           client_id: string
           created_at?: string
@@ -480,24 +470,18 @@ export type Database = {
           is_valid?: boolean | null
           last_validated_at?: string | null
           metadata?: Json | null
-          oauth_access_token?: string | null
           oauth_access_token_encrypted?: string | null
-          oauth_refresh_token?: string | null
           oauth_refresh_token_encrypted?: string | null
           platform: string
           updated_at?: string
           validation_error?: string | null
         }
         Update: {
-          access_token?: string | null
           access_token_encrypted?: string | null
-          access_token_secret?: string | null
           access_token_secret_encrypted?: string | null
           account_id?: string | null
           account_name?: string | null
-          api_key?: string | null
           api_key_encrypted?: string | null
-          api_secret?: string | null
           api_secret_encrypted?: string | null
           client_id?: string
           created_at?: string
@@ -506,9 +490,7 @@ export type Database = {
           is_valid?: boolean | null
           last_validated_at?: string | null
           metadata?: Json | null
-          oauth_access_token?: string | null
           oauth_access_token_encrypted?: string | null
-          oauth_refresh_token?: string | null
           oauth_refresh_token_encrypted?: string | null
           platform?: string
           updated_at?: string
@@ -3944,12 +3926,12 @@ export type Database = {
           validation_error: string | null
         }
         Insert: {
-          access_token?: never
-          access_token_secret?: never
+          access_token?: string | null
+          access_token_secret?: string | null
           account_id?: string | null
           account_name?: string | null
-          api_key?: never
-          api_secret?: never
+          api_key?: string | null
+          api_secret?: string | null
           client_id?: string | null
           created_at?: string | null
           expires_at?: string | null
@@ -3957,19 +3939,19 @@ export type Database = {
           is_valid?: boolean | null
           last_validated_at?: string | null
           metadata?: Json | null
-          oauth_access_token?: never
-          oauth_refresh_token?: never
+          oauth_access_token?: string | null
+          oauth_refresh_token?: string | null
           platform?: string | null
           updated_at?: string | null
           validation_error?: string | null
         }
         Update: {
-          access_token?: never
-          access_token_secret?: never
+          access_token?: string | null
+          access_token_secret?: string | null
           account_id?: string | null
           account_name?: string | null
-          api_key?: never
-          api_secret?: never
+          api_key?: string | null
+          api_secret?: string | null
           client_id?: string | null
           created_at?: string | null
           expires_at?: string | null
@@ -3977,8 +3959,8 @@ export type Database = {
           is_valid?: boolean | null
           last_validated_at?: string | null
           metadata?: Json | null
-          oauth_access_token?: never
-          oauth_refresh_token?: never
+          oauth_access_token?: string | null
+          oauth_refresh_token?: string | null
           platform?: string | null
           updated_at?: string | null
           validation_error?: string | null
