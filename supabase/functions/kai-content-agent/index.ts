@@ -179,8 +179,20 @@ serve(async (req) => {
 
       const result = await response.json();
       const content = result?.candidates?.[0]?.content?.parts?.[0]?.text || "";
-      
+
       console.log("[kai-content-agent] Non-streaming response length:", content.length);
+
+      // Log AI usage
+      if (userId) {
+        const inTok = result?.usageMetadata?.promptTokenCount ?? estimateTokens(fullSystemPrompt + (userRequest || ""));
+        const outTok = result?.usageMetadata?.candidatesTokenCount ?? estimateTokens(content);
+        await logAIUsage(supabaseService, userId, modelName, "kai-content-agent", inTok, outTok, {
+          client_id: clientId,
+          format: normalizedFormat,
+          platform,
+          streaming: false,
+        });
+      }
 
       return new Response(
         JSON.stringify({ content }),
