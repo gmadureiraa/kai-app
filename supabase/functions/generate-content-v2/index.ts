@@ -282,6 +282,7 @@ serve(async (req) => {
       isServiceRole ? {} : { global: { headers: { Authorization: authHeader } } }
     );
 
+    let userId: string | null = null;
     if (!isServiceRole) {
       const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
       if (authError || !user) {
@@ -290,10 +291,28 @@ serve(async (req) => {
           { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
+      userId = user.id;
     }
 
     const body: GenerateRequest = await req.json();
     const { type, inputs, config, clientId } = body;
+
+    // Resolve userId for service-role automation calls (so usage gets attributed)
+    if (!userId && isServiceRole && clientId) {
+      try {
+        const svc = createClient(Deno.env.get("SUPABASE_URL") ?? "", serviceRoleKey!);
+        const { data: c } = await svc
+          .from("clients")
+          .select("user_id, created_by, workspace_id")
+          .eq("id", clientId)
+          .maybeSingle();
+        userId = c?.user_id || c?.created_by || null;
+        if (!userId && c?.workspace_id) {
+          const { data: ws } = await svc.from("workspaces").select("owner_id").eq("id", c.workspace_id).maybeSingle();
+          userId = ws?.owner_id || null;
+        }
+      } catch (_) { /* ignore */ }
+    }
 
     console.log("[generate-content-v2] Request:", { type, inputsCount: inputs.length, config, clientId });
 
