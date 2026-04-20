@@ -4,6 +4,7 @@ import { getFormatRules, UNIVERSAL_RULES } from "../_shared/format-rules.ts";
 import { getFormatDocs, getFormatChecklistFormatted, getGlobalKnowledge, getSuccessPatterns, getFullContentContext, getStructuredVoice } from "../_shared/knowledge-loader.ts";
 import { buildForbiddenPhrasesSection, UNIVERSAL_OUTPUT_RULES } from "../_shared/quality-rules.ts";
 import { selectModelForFormat } from "../_shared/prompt-builder.ts";
+import { logAIUsage, estimateTokens } from "../_shared/ai-usage.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -281,6 +282,7 @@ serve(async (req) => {
       isServiceRole ? {} : { global: { headers: { Authorization: authHeader } } }
     );
 
+    let userId: string | null = null;
     if (!isServiceRole) {
       const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
       if (authError || !user) {
@@ -289,10 +291,28 @@ serve(async (req) => {
           { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
+      userId = user.id;
     }
 
     const body: GenerateRequest = await req.json();
     const { type, inputs, config, clientId } = body;
+
+    // Resolve userId for service-role automation calls (so usage gets attributed)
+    if (!userId && isServiceRole && clientId) {
+      try {
+        const svc = createClient(Deno.env.get("SUPABASE_URL") ?? "", serviceRoleKey!);
+        const { data: c } = await svc
+          .from("clients")
+          .select("user_id, created_by, workspace_id")
+          .eq("id", clientId)
+          .maybeSingle();
+        userId = c?.user_id || c?.created_by || null;
+        if (!userId && c?.workspace_id) {
+          const { data: ws } = await svc.from("workspaces").select("owner_id").eq("id", c.workspace_id).maybeSingle();
+          userId = ws?.owner_id || null;
+        }
+      } catch (_) { /* ignore */ }
+    }
 
     console.log("[generate-content-v2] Request:", { type, inputsCount: inputs.length, config, clientId });
 
@@ -491,6 +511,22 @@ Gere o conteúdo agora:`;
 
       const aiData = await response.json();
       const generatedText = aiData.candidates?.[0]?.content?.parts?.[0]?.text || "";
+
+      // Log AI usage
+      if (userId) {
+        try {
+          const svcLogger = createClient(Deno.env.get("SUPABASE_URL") ?? "", Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "");
+          const inTok = aiData?.usageMetadata?.promptTokenCount ?? estimateTokens(prompt);
+          const outTok = aiData?.usageMetadata?.candidatesTokenCount ?? estimateTokens(generatedText);
+          await logAIUsage(svcLogger, userId, modelName, "generate-content-v2", inTok, outTok, {
+            client_id: clientId,
+            format: requestedFormat,
+            platform: config.platform,
+          });
+        } catch (e) {
+          console.error("[generate-content-v2] Failed to log usage:", e);
+        }
+      }
 
       // Special handling for thread format - parse structured response
       if (config.format === 'thread') {

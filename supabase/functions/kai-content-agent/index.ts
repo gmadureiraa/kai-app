@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { buildWriterSystemPrompt, selectModelForFormat } from "../_shared/prompt-builder.ts";
 import { normalizeFormatKey } from "../_shared/knowledge-loader.ts";
+import { logAIUsage, estimateTokens } from "../_shared/ai-usage.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -27,6 +28,21 @@ serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+
+    // Resolve userId from auth header (best-effort) for usage logging
+    let userId: string | null = null;
+    const authHeader = req.headers.get("Authorization");
+    if (authHeader) {
+      try {
+        const sbAuth = createClient(supabaseUrl, supabaseAnonKey, {
+          global: { headers: { Authorization: authHeader } },
+        });
+        const { data: { user } } = await sbAuth.auth.getUser();
+        userId = user?.id ?? null;
+      } catch (_) { /* ignore */ }
+    }
+    const supabaseService = createClient(supabaseUrl, supabaseKey);
 
     const requestBody = await req.json() as ContentRequest & { stream?: boolean; message?: string };
     const { clientId, request, format, platform, workspaceId, conversationHistory, includePerformanceContext = true, stream = true, message, additionalMaterial } = requestBody;
@@ -38,6 +54,24 @@ serve(async (req) => {
         JSON.stringify({ error: "clientId é obrigatório" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
+    }
+
+    // Fallback: derive userId from client owner if no JWT present
+    if (!userId && clientId) {
+      const { data: clientRow } = await supabaseService
+        .from("clients")
+        .select("user_id, created_by, workspace_id")
+        .eq("id", clientId)
+        .maybeSingle();
+      userId = clientRow?.user_id || clientRow?.created_by || null;
+      if (!userId && clientRow?.workspace_id) {
+        const { data: ws } = await supabaseService
+          .from("workspaces")
+          .select("owner_id")
+          .eq("id", clientRow.workspace_id)
+          .maybeSingle();
+        userId = ws?.owner_id || null;
+      }
     }
 
     // ===================================================
@@ -145,8 +179,20 @@ serve(async (req) => {
 
       const result = await response.json();
       const content = result?.candidates?.[0]?.content?.parts?.[0]?.text || "";
-      
+
       console.log("[kai-content-agent] Non-streaming response length:", content.length);
+
+      // Log AI usage
+      if (userId) {
+        const inTok = result?.usageMetadata?.promptTokenCount ?? estimateTokens(fullSystemPrompt + (userRequest || ""));
+        const outTok = result?.usageMetadata?.candidatesTokenCount ?? estimateTokens(content);
+        await logAIUsage(supabaseService, userId, modelName, "kai-content-agent", inTok, outTok, {
+          client_id: clientId,
+          format: normalizedFormat,
+          platform,
+          streaming: false,
+        });
+      }
 
       return new Response(
         JSON.stringify({ content }),
@@ -185,21 +231,29 @@ serve(async (req) => {
     }
 
     // Transform Gemini SSE format to OpenAI-compatible format
+    let capturedInputTokens = 0;
+    let capturedOutputTokens = 0;
+    let accumulatedText = "";
     const transformStream = new TransformStream({
       transform(chunk, controller) {
         const text = new TextDecoder().decode(chunk);
         const lines = text.split("\n");
-        
+
         for (const line of lines) {
           if (line.startsWith("data: ")) {
             try {
               const data = JSON.parse(line.slice(6));
               const content = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
               if (content) {
+                accumulatedText += content;
                 const openAIFormat = {
                   choices: [{ delta: { content } }]
                 };
                 controller.enqueue(new TextEncoder().encode(`data: ${JSON.stringify(openAIFormat)}\n\n`));
+              }
+              if (data.usageMetadata) {
+                capturedInputTokens = data.usageMetadata.promptTokenCount ?? capturedInputTokens;
+                capturedOutputTokens = data.usageMetadata.candidatesTokenCount ?? capturedOutputTokens;
               }
             } catch {
               // Skip invalid JSON lines
@@ -207,8 +261,23 @@ serve(async (req) => {
           }
         }
       },
-      flush(controller) {
+      async flush(controller) {
         controller.enqueue(new TextEncoder().encode("data: [DONE]\n\n"));
+        // Log AI usage at end of stream
+        if (userId) {
+          try {
+            const inTok = capturedInputTokens || estimateTokens(fullSystemPrompt + (userRequest || ""));
+            const outTok = capturedOutputTokens || estimateTokens(accumulatedText);
+            await logAIUsage(supabaseService, userId!, modelName, "kai-content-agent", inTok, outTok, {
+              client_id: clientId,
+              format: normalizedFormat,
+              platform,
+              streaming: true,
+            });
+          } catch (e) {
+            console.error("[kai-content-agent] Failed to log usage:", e);
+          }
+        }
       }
     });
 
