@@ -311,6 +311,7 @@ serve(async (req) => {
       writerResult = await callLLM(writerMessages, {
         maxTokens: 8192,
         temperature: dynamicTemp,
+        usageContext: { ...usageContext, metadata: { ...usageContext.metadata, step: "writer" } },
       });
       usedProvider = writerResult.provider;
     } catch (error) {
