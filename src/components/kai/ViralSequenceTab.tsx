@@ -28,6 +28,7 @@ import {
   Layers,
   FileImage,
   FileText,
+  Eye,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -54,6 +55,7 @@ import {
   exportCarouselAsPngs,
   exportCarouselAsPdf,
 } from "./viral-sequence/exportCarousel";
+import { CarouselFullPreview } from "./viral-sequence/CarouselFullPreview";
 
 interface ViralSequenceTabProps {
   clientId: string;
@@ -86,6 +88,7 @@ export const ViralSequenceTab = ({ clientId, client }: ViralSequenceTabProps) =>
   const [tone, setTone] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
 
   // Mapa de refs dos nós TwitterSlide (pra export PNG/PDF via html-to-image).
   const slideNodesRef = useRef<Map<string, HTMLElement>>(new Map());
@@ -95,10 +98,35 @@ export const ViralSequenceTab = ({ clientId, client }: ViralSequenceTabProps) =>
     else slideNodesRef.current.delete(id);
   };
 
+  const hasAnySlideFilled = carousel.slides.some(
+    (s) => s.heading.trim() || s.body.trim(),
+  );
+
   // Autosave (debounced pela natureza de useEffect a cada render)
   useEffect(() => {
     saveCurrentCarousel(carousel);
   }, [carousel]);
+
+  // Atalho de teclado: P abre preview (ignora se focus está em input/textarea)
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (!hasAnySlideFilled) return;
+      const target = e.target as HTMLElement | null;
+      if (
+        target &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.isContentEditable)
+      )
+        return;
+      if (e.key === "p" || e.key === "P") {
+        e.preventDefault();
+        setPreviewOpen((v) => !v);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [hasAnySlideFilled]);
 
   // Se trocar cliente no meio do caminho, reseta
   useEffect(() => {
@@ -108,10 +136,6 @@ export const ViralSequenceTab = ({ clientId, client }: ViralSequenceTabProps) =>
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clientId]);
-
-  const hasAnySlideFilled = carousel.slides.some(
-    (s) => s.heading.trim() || s.body.trim(),
-  );
 
   const handleGenerate = async () => {
     if (!briefing.trim()) {
@@ -246,6 +270,16 @@ export const ViralSequenceTab = ({ clientId, client }: ViralSequenceTabProps) =>
           <div className="flex items-center gap-1.5 shrink-0">
             {hasAnySlideFilled && (
               <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPreviewOpen(true)}
+                  className="gap-1.5 h-8"
+                  title="Preview em tela cheia (atalho: P)"
+                >
+                  <Eye className="h-3.5 w-3.5" />
+                  Preview
+                </Button>
                 <Button variant="ghost" size="sm" onClick={handleReset} className="gap-1.5 h-8">
                   <RotateCcw className="h-3.5 w-3.5" />
                   Zerar
@@ -416,6 +450,13 @@ export const ViralSequenceTab = ({ clientId, client }: ViralSequenceTabProps) =>
           )}
         </div>
       </div>
+
+      {/* Full-screen preview modal */}
+      <CarouselFullPreview
+        carousel={carousel}
+        open={previewOpen}
+        onOpenChange={setPreviewOpen}
+      />
     </div>
   );
 };
