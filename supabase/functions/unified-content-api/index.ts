@@ -476,14 +476,18 @@ NÃO substitua gírias, expressões informais ou tom casual que fazem parte do v
 
     console.log(`[UNIFIED-API] Completed in ${processingTime}ms, ${totalTokens} tokens`);
 
-    // Log to ai_usage_logs with format tracking
+    // Note: AI usage is auto-logged inside callLLM via usageContext.
+    // We add a final aggregate row for format/validation tracking purposes.
     try {
       await supabase.from("ai_usage_logs").insert({
-        user_id: req.headers.get("x-user-id") || "system",
-        edge_function: "unified-content-api",
+        user_id: resolvedUserId,
+        edge_function: "unified-content-api-summary",
         provider: "google",
-        model_name: "gemini-2.5-flash",
-        total_tokens: totalTokens,
+        model_name: "multi-agent-pipeline",
+        total_tokens: 0,
+        input_tokens: 0,
+        output_tokens: 0,
+        estimated_cost_usd: 0,
         format_type: normalizedFormat,
         client_id: client_id,
         validation_passed: finalValidation.valid,
@@ -491,12 +495,13 @@ NÃO substitua gírias, expressões informais ou tom casual que fazem parte do v
         metadata: {
           format: normalizedFormat,
           processing_time_ms: processingTime,
+          aggregate_tokens: totalTokens,
           steps: stepsCompleted,
           sources_used: sourcesUsed,
         },
       });
     } catch (logError) {
-      console.error("[UNIFIED-API] Error logging usage:", logError);
+      console.error("[UNIFIED-API] Error logging summary:", logError);
     }
 
     const response: ContentResponse = {
