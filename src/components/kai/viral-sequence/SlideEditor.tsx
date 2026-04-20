@@ -23,6 +23,9 @@ import {
   X,
   RefreshCw,
   ImageIcon,
+  Rocket,
+  Flag,
+  Target,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -102,19 +105,52 @@ export function SlideEditor({ slide, totalSlides, profile, onChange }: SlideEdit
   const currentImageUrl =
     slide.image.kind === "none" ? undefined : slide.image.url;
 
+  const isCover = slide.order === 1;
+  const isCta = slide.order === totalSlides;
+  const roleLabel = isCover ? "Capa" : isCta ? "CTA" : "Insight";
+  const RoleIcon = isCover ? Flag : isCta ? Target : Rocket;
+  const roleColor = isCover
+    ? "bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-400"
+    : isCta
+      ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
+      : "bg-muted text-muted-foreground";
+
+  const headingOver = slide.heading.length > 80;
+  const bodyOver = slide.body.length > 280;
+
   return (
-    <div className="bg-card border border-border/40 rounded-xl overflow-hidden flex flex-col">
+    <div
+      className={cn(
+        "bg-card border border-border/40 rounded-xl overflow-hidden flex flex-col",
+        "hover:shadow-md transition-shadow",
+        (isCover || isCta) && "ring-1 ring-border/30",
+      )}
+    >
       {/* Preview */}
-      <div className="bg-muted/40 p-4 flex items-center justify-center border-b border-border/30">
-        <TwitterSlide
-          heading={slide.heading || "Seu título aqui"}
-          body={slide.body}
-          imageUrl={currentImageUrl}
-          slideNumber={slide.order}
-          totalSlides={totalSlides}
-          profile={profile}
-          scale={0.28}
-        />
+      <div className="bg-gradient-to-b from-muted/30 to-muted/60 p-4 flex items-center justify-center border-b border-border/30 relative">
+        <span className="absolute top-2 left-2 flex items-center gap-1 text-[10px] font-mono uppercase tracking-wider font-semibold text-muted-foreground bg-background/80 backdrop-blur-sm px-1.5 py-0.5 rounded">
+          {String(slide.order).padStart(2, "0")}
+        </span>
+        <span
+          className={cn(
+            "absolute top-2 right-2 flex items-center gap-1 text-[10px] font-mono uppercase tracking-wider font-semibold px-1.5 py-0.5 rounded",
+            roleColor,
+          )}
+        >
+          <RoleIcon className="h-2.5 w-2.5" />
+          {roleLabel}
+        </span>
+        <div className="drop-shadow-md">
+          <TwitterSlide
+            heading={slide.heading || "Seu título aqui"}
+            body={slide.body}
+            imageUrl={currentImageUrl}
+            slideNumber={slide.order}
+            totalSlides={totalSlides}
+            profile={profile}
+            scale={0.28}
+          />
+        </div>
       </div>
 
       {/* Fields */}
@@ -123,8 +159,11 @@ export function SlideEditor({ slide, totalSlides, profile, onChange }: SlideEdit
           <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
             Slide {slide.order}/{totalSlides}
           </span>
-          <span className="text-[10px] text-muted-foreground">
-            {slide.heading.length}/80 · {slide.body.length}/280
+          <span className={cn(
+            "text-[10px] font-mono",
+            (headingOver || bodyOver) ? "text-destructive font-semibold" : "text-muted-foreground",
+          )}>
+            H {slide.heading.length}/80 · B {slide.body.length}/280
           </span>
         </div>
 

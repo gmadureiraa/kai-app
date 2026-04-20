@@ -23,6 +23,9 @@ import {
   Twitter,
   ArrowRight,
   Save,
+  Wand2,
+  Zap,
+  Layers,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -152,45 +155,58 @@ export const ViralSequenceTab = ({ clientId, client }: ViralSequenceTabProps) =>
     );
   };
 
+  const filledCount = carousel.slides.filter(
+    (s) => s.heading.trim() || s.body.trim(),
+  ).length;
+  const imageCount = carousel.slides.filter(
+    (s) => s.image.kind !== "none",
+  ).length;
+
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      {/* Header */}
-      <div className="border-b border-border/30 bg-background/60 backdrop-blur-sm px-6 py-4">
+      {/* Header — sticky, com gradiente sutil */}
+      <div className="border-b border-border/30 bg-gradient-to-b from-sky-50/30 to-background dark:from-sky-950/20 backdrop-blur-sm px-6 py-4 shrink-0">
         <div className="flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-sky-100 dark:bg-sky-900/30">
-            <Twitter className="h-5 w-5 text-sky-600 dark:text-sky-400" />
+          <div className="p-2 rounded-lg bg-sky-500 text-white shadow-sm shadow-sky-500/30">
+            <Twitter className="h-5 w-5" />
           </div>
-          <div className="flex-1">
+          <div className="flex-1 min-w-0">
             <h2 className="text-lg font-semibold flex items-center gap-2">
               Sequência Viral
               <span className="text-xs font-normal text-muted-foreground">·</span>
-              <span className="text-xs font-normal text-muted-foreground">
+              <span className="text-xs font-normal text-muted-foreground truncate">
                 {client.name}
               </span>
+              {hasAnySlideFilled && (
+                <span className="ml-1 inline-flex items-center gap-1 text-[10px] font-mono bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 px-1.5 py-0.5 rounded">
+                  <Zap className="h-2.5 w-2.5" />
+                  {filledCount} copies · {imageCount} imagens
+                </span>
+              )}
             </h2>
             <p className="text-xs text-muted-foreground">
               Carrossel estilo Twitter — KAI cria as copies, você escolhe a imagem de cada slide.
             </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 shrink-0">
             {hasAnySlideFilled && (
               <>
-                <Button variant="ghost" size="sm" onClick={handleReset} className="gap-1.5">
+                <Button variant="ghost" size="sm" onClick={handleReset} className="gap-1.5 h-8">
                   <RotateCcw className="h-3.5 w-3.5" />
                   Zerar
                 </Button>
-                <Button variant="outline" size="sm" onClick={handleExportJson} className="gap-1.5">
+                <Button variant="outline" size="sm" onClick={handleExportJson} className="gap-1.5 h-8">
                   <Download className="h-3.5 w-3.5" />
                   JSON
                 </Button>
-                <Button variant="outline" size="sm" onClick={handleSaveStub} className="gap-1.5">
+                <Button variant="outline" size="sm" onClick={handleSaveStub} className="gap-1.5 h-8">
                   <Save className="h-3.5 w-3.5" />
                   Salvar
                 </Button>
                 <Button
                   size="sm"
                   onClick={handlePublishStub}
-                  className="gap-1.5 bg-sky-600 hover:bg-sky-700 text-white"
+                  className="gap-1.5 h-8 bg-sky-600 hover:bg-sky-700 text-white shadow-sm shadow-sky-600/30"
                 >
                   <Send className="h-3.5 w-3.5" />
                   Publicar
@@ -201,110 +217,143 @@ export const ViralSequenceTab = ({ clientId, client }: ViralSequenceTabProps) =>
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-6 py-6 space-y-6">
-        {/* Briefing */}
-        <div className="bg-card border border-border/30 rounded-xl p-5 space-y-4 max-w-3xl mx-auto w-full">
-          <div>
-            <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-              Briefing do carrossel
-            </label>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Escreva o tema, ângulo e insights que você quer passar. Quanto mais específico, melhor.
-            </p>
-          </div>
-          <Textarea
-            value={briefing}
-            onChange={(e) => setBriefing(e.target.value)}
-            placeholder={`Ex: "Por que a maioria dos iniciantes em Bitcoin perde dinheiro nos primeiros 6 meses — traz 5 erros comuns + 1 hack que ninguém fala sobre self-custody."`}
-            rows={4}
-            className="text-sm resize-none"
-            disabled={isGenerating}
-          />
-          <div className="flex items-center gap-3">
-            <div className="flex-1">
-              <Input
-                value={tone}
-                onChange={(e) => setTone(e.target.value)}
-                placeholder="Tom (opcional): ex: direto, provocativo, técnico..."
-                className="h-8 text-sm"
+      <div className="flex-1 overflow-y-auto">
+        <div className="px-6 py-6 space-y-6">
+          {/* Briefing form — hero style */}
+          <div
+            className={cn(
+              "relative overflow-hidden rounded-2xl border max-w-3xl mx-auto w-full transition-all",
+              hasAnySlideFilled
+                ? "bg-card border-border/30 p-4"
+                : "bg-gradient-to-br from-sky-50/60 via-background to-background dark:from-sky-950/30 border-sky-200/40 dark:border-sky-800/30 p-6",
+            )}
+          >
+            {!hasAnySlideFilled && (
+              <>
+                <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-br from-sky-200/30 to-transparent dark:from-sky-700/20 rounded-full -translate-y-1/2 translate-x-1/2 blur-2xl pointer-events-none" />
+                <div className="relative flex items-center gap-2 mb-3">
+                  <Wand2 className="h-4 w-4 text-sky-600 dark:text-sky-400" />
+                  <span className="text-xs font-semibold uppercase tracking-wide text-sky-700 dark:text-sky-400">
+                    Novo carrossel
+                  </span>
+                </div>
+              </>
+            )}
+            <div className="relative space-y-3">
+              <div>
+                <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                  Briefing
+                </label>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Tema, ângulo e insights. Quanto mais específico, melhor a saída.
+                </p>
+              </div>
+              <Textarea
+                value={briefing}
+                onChange={(e) => setBriefing(e.target.value)}
+                placeholder={`Ex: "Por que a maioria dos iniciantes em Bitcoin perde dinheiro nos primeiros 6 meses — traz 5 erros comuns + 1 hack que ninguém fala sobre self-custody."`}
+                rows={hasAnySlideFilled ? 2 : 4}
+                className={cn(
+                  "text-sm resize-none transition-all bg-background",
+                  !hasAnySlideFilled && "border-border/40 shadow-sm",
+                )}
                 disabled={isGenerating}
               />
-            </div>
-            <Button
-              onClick={handleGenerate}
-              disabled={isGenerating || !briefing.trim()}
-              className={cn(
-                "gap-2 bg-sky-600 hover:bg-sky-700 text-white",
-                hasAnySlideFilled && "bg-sky-600",
-              )}
-            >
-              {isGenerating ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Sparkles className="h-4 w-4" />
-              )}
-              {isGenerating
-                ? "Gerando..."
-                : hasAnySlideFilled
-                  ? "Re-gerar"
-                  : "Gerar carrossel"}
-            </Button>
-          </div>
-        </div>
-
-        {/* Grid de slides */}
-        {hasAnySlideFilled ? (
-          <div className="max-w-7xl mx-auto w-full">
-            <div className="flex items-center gap-2 mb-4">
-              <h3 className="text-sm font-semibold">Slides</h3>
-              <span className="text-xs text-muted-foreground">
-                · {carousel.slides.length} slides · autosalvando
-              </span>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {carousel.slides.map((slide) => (
-                <SlideEditor
-                  key={slide.id}
-                  slide={slide}
-                  totalSlides={carousel.slides.length}
-                  profile={carousel.profile}
-                  onChange={(next) =>
-                    setCarousel((c) => ({
-                      ...c,
-                      updatedAt: new Date().toISOString(),
-                      slides: c.slides.map((s) => (s.id === next.id ? next : s)),
-                    }))
-                  }
+              <div className="flex items-center gap-2">
+                <Input
+                  value={tone}
+                  onChange={(e) => setTone(e.target.value)}
+                  placeholder="Tom (opcional): direto, provocativo, técnico..."
+                  className="h-9 text-sm flex-1"
+                  disabled={isGenerating}
                 />
-              ))}
+                <Button
+                  onClick={handleGenerate}
+                  disabled={isGenerating || !briefing.trim()}
+                  className="h-9 gap-2 bg-sky-600 hover:bg-sky-700 text-white shadow-sm shadow-sky-600/30 px-5"
+                >
+                  {isGenerating ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Sparkles className="h-4 w-4" />
+                  )}
+                  {isGenerating
+                    ? "Gerando..."
+                    : hasAnySlideFilled
+                      ? "Re-gerar"
+                      : "Gerar carrossel"}
+                </Button>
+              </div>
             </div>
           </div>
-        ) : (
-          <EmptyState />
-        )}
+
+          {/* Grid de slides */}
+          {hasAnySlideFilled ? (
+            <div className="max-w-7xl mx-auto w-full">
+              <div className="flex items-center gap-2 mb-4">
+                <Layers className="h-4 w-4 text-muted-foreground" />
+                <h3 className="text-sm font-semibold">Slides</h3>
+                <span className="text-xs text-muted-foreground">
+                  · {carousel.slides.length} slides · autosalvando
+                </span>
+                <div className="ml-auto flex items-center gap-1 text-[10px] text-muted-foreground">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  Salvo localmente
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                {carousel.slides.map((slide) => (
+                  <SlideEditor
+                    key={slide.id}
+                    slide={slide}
+                    totalSlides={carousel.slides.length}
+                    profile={carousel.profile}
+                    onChange={(next) =>
+                      setCarousel((c) => ({
+                        ...c,
+                        updatedAt: new Date().toISOString(),
+                        slides: c.slides.map((s) => (s.id === next.id ? next : s)),
+                      }))
+                    }
+                  />
+                ))}
+              </div>
+            </div>
+          ) : (
+            <EmptyState />
+          )}
+        </div>
       </div>
     </div>
   );
 };
 
 function EmptyState() {
+  const steps = [
+    { n: "01", label: "KAI gera 8 slides", desc: "Capa + 6 insights + CTA" },
+    { n: "02", label: "Você edita", desc: "Headline, body, imagem" },
+    { n: "03", label: "Publica", desc: "Export / LATE (em breve)" },
+  ];
   return (
-    <div className="flex flex-col items-center justify-center py-16 text-center max-w-xl mx-auto gap-4">
-      <div className="p-4 rounded-full bg-sky-100 dark:bg-sky-900/20">
-        <Twitter className="h-7 w-7 text-sky-600 dark:text-sky-400" />
+    <div className="flex flex-col items-center py-10 max-w-2xl mx-auto gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 w-full">
+        {steps.map((s) => (
+          <div
+            key={s.n}
+            className="rounded-xl border border-dashed border-border/50 bg-card/50 p-4 text-center"
+          >
+            <p className="text-[10px] font-mono uppercase tracking-[0.2em] text-sky-600 dark:text-sky-400 mb-1">
+              {s.n}
+            </p>
+            <p className="text-sm font-semibold">{s.label}</p>
+            <p className="text-xs text-muted-foreground mt-0.5">{s.desc}</p>
+          </div>
+        ))}
       </div>
-      <h3 className="text-base font-semibold">
-        Escreva um briefing pra começar
-      </h3>
-      <p className="text-sm text-muted-foreground">
-        O KAI vai gerar 8 slides estilo Twitter (hook + 6 insights + CTA).
-        Você ajusta as copies e escolhe uma imagem por slide — gerada com IA,
-        buscada no Unsplash, ou upload direto.
-      </p>
-      <div className="flex items-center gap-2 text-xs text-muted-foreground pt-2">
+      <div className="flex items-center gap-2 text-xs text-muted-foreground">
         <span>Próximo passo:</span>
         <ArrowRight className="h-3.5 w-3.5" />
-        <span>Escreva acima e clique em "Gerar carrossel"</span>
+        <span>Escreva um briefing acima e clique em "Gerar carrossel"</span>
       </div>
     </div>
   );
