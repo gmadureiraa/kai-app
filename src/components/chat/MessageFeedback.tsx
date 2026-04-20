@@ -71,8 +71,13 @@ export function MessageFeedback({
   const submitFeedback = async (
     feedbackType: "approved" | "edited" | "regenerated" | "saved_to_library",
     editDistance?: number,
-    editedContentValue?: string
+    editedContentValue?: string,
+    options?: { markGiven?: boolean }
   ) => {
+    // markGiven default true — pra "edited" passamos false pro UI não
+    // esconder os botões de ação. O user precisa poder clicar "Usar" após
+    // salvar a edição (regressão bug reportada).
+    const markGiven = options?.markGiven ?? true;
     try {
       const { data: userData } = await supabase.auth.getUser();
       if (!userData.user) return;
@@ -92,7 +97,7 @@ export function MessageFeedback({
         },
       });
 
-      setFeedbackGiven(feedbackType);
+      if (markGiven) setFeedbackGiven(feedbackType);
     } catch (error) {
       console.error("Error submitting feedback:", error);
     }
@@ -100,15 +105,18 @@ export function MessageFeedback({
 
   const handleApprove = async () => {
     setIsSubmitting(true);
+    // Usa o conteúdo editado se o user passou por "Editar + Salvar"; senão o original.
+    const finalContent =
+      editedContent && editedContent !== content ? editedContent : content;
     await submitFeedback("approved");
     setIsSubmitting(false);
-    
+
     // If user has planning access and callback is provided, open planning dialog
     if (hasPlanningAccess && onUseContent) {
-      onUseContent(content);
+      onUseContent(finalContent);
     } else {
       // Fallback: copy to clipboard
-      navigator.clipboard.writeText(content);
+      navigator.clipboard.writeText(finalContent);
       toast({
         description: "Conteúdo copiado! ✓",
         duration: 2000,
@@ -124,15 +132,16 @@ export function MessageFeedback({
   const handleSaveEdit = async () => {
     setIsSubmitting(true);
     const distance = calculateEditDistance(content, editedContent);
-    await submitFeedback("edited", distance, editedContent);
+    // markGiven: false → telemetry é persistida, mas os botões ("Usar",
+    // "Editar", "Refazer") continuam visíveis pro user prosseguir. O
+    // conteúdo editado fica guardado em `editedContent` e é usado por
+    // handleApprove ao clicar "Usar".
+    await submitFeedback("edited", distance, editedContent, { markGiven: false });
     setIsSubmitting(false);
     setIsEditing(false);
-    
-    // Copy edited content to clipboard
-    navigator.clipboard.writeText(editedContent);
     toast({
-      description: "Conteúdo editado copiado! ✓",
-      duration: 2000,
+      description: "Edição salva — clique em Usar para aplicar.",
+      duration: 2500,
     });
   };
 
