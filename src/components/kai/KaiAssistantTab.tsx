@@ -9,7 +9,7 @@ import { Citation } from "@/components/chat/CitationChip";
 import { EnhancedMessageBubble } from "@/components/chat/EnhancedMessageBubble";
 import { PipelineProgress } from "@/components/chat/PipelineProgress";
 import { QuickSuggestions } from "@/components/chat/QuickSuggestions";
-import { ModeSelector, ChatMode } from "@/components/chat/ModeSelector";
+import type { ChatMode } from "@/components/chat/ModeSelector";
 import { Client } from "@/hooks/useClients";
 import KaleidosLogo from "@/assets/kaleidos-logo.svg";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -41,7 +41,10 @@ export const KaiAssistantTab = ({ clientId, client }: KaiAssistantTabProps) => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   
-  const [chatMode, setChatMode] = useState<ChatMode>("ideas");
+  // Modo fixo — ModeSelector removido; o agente decide a rota automaticamente
+  // com base no conteúdo da mensagem (intent detection no server + futuramente
+  // tool-calling na F0.3b+).
+  const chatMode: ChatMode = "content";
   const [planningDialogOpen, setPlanningDialogOpen] = useState(false);
   const [contentForPlanning, setContentForPlanning] = useState("");
   
@@ -320,18 +323,11 @@ export const KaiAssistantTab = ({ clientId, client }: KaiAssistantTabProps) => {
               onSend={handleSend}
               disabled={isLoading}
               templateType="free_chat"
-              placeholder="Pergunte sobre o cliente... Use @ para formatos"
+              placeholder="Peça qualquer coisa — o KAI decide o que fazer"
               contentLibrary={contentLibrary || []}
               referenceLibrary={referenceLibrary || []}
               selectedMode={chatMode}
             />
-            <div className="flex justify-center px-4">
-              <ModeSelector
-                mode={chatMode}
-                onChange={setChatMode}
-                disabled={isLoading}
-              />
-            </div>
           </div>
         </div>
       </div>
