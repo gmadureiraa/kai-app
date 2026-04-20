@@ -150,6 +150,34 @@ serve(async (req) => {
     const result = await whisperResponse.json();
     console.log('Transcription complete, duration:', result.duration, 'seconds');
 
+    // Log AI usage (Whisper billed per second of audio)
+    try {
+      const supabaseUrl = Deno.env.get("SUPABASE_URL");
+      const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+      let resolvedUserId = userId || null;
+      if (supabaseUrl && serviceKey) {
+        const svc = createClient(supabaseUrl, serviceKey);
+        if (!resolvedUserId && clientId) {
+          const { data: c } = await svc.from("clients").select("user_id, created_by, workspace_id").eq("id", clientId).maybeSingle();
+          resolvedUserId = c?.user_id || c?.created_by || null;
+          if (!resolvedUserId && c?.workspace_id) {
+            const { data: ws } = await svc.from("workspaces").select("owner_id").eq("id", c.workspace_id).maybeSingle();
+            resolvedUserId = ws?.owner_id || null;
+          }
+        }
+        if (resolvedUserId) {
+          const seconds = Math.ceil(result.duration || 0);
+          await logAIUsage(svc, resolvedUserId, "whisper-1", "transcribe-media", seconds, 0, {
+            client_id: clientId,
+            duration_seconds: seconds,
+            file_name: fileName,
+          });
+        }
+      }
+    } catch (e) {
+      console.error("[transcribe-media] Failed to log usage:", e);
+    }
+
     return new Response(JSON.stringify({
       text: result.text,
       duration: result.duration,
