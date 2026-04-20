@@ -154,6 +154,7 @@ serve(async (req) => {
     // ========================================
     // SECURITY: Validate user access to client
     // ========================================
+    let resolvedUserId: string = req.headers.get("x-user-id") || "system";
     const authHeader = req.headers.get("Authorization");
     if (authHeader && authHeader.startsWith("Bearer ") && !authHeader.includes(supabaseKey)) {
       // This is a user JWT, not service role - validate access
@@ -173,6 +174,7 @@ serve(async (req) => {
       }
       
       const userId = claims.user.id;
+      resolvedUserId = userId;
       
       // Check if user has access to the client's workspace
       const { data: clientData, error: clientError } = await supabase
@@ -206,6 +208,30 @@ serve(async (req) => {
       
       console.log(`[UNIFIED-API] User ${userId} authorized for client ${client_id}`);
     }
+
+    // For automation/system calls, fall back to client owner so cost is attributable
+    if (resolvedUserId === "system") {
+      try {
+        const { data: ownerRow } = await supabase
+          .from("clients")
+          .select("created_by, user_id")
+          .eq("id", client_id)
+          .single();
+        if (ownerRow) {
+          resolvedUserId = (ownerRow.created_by || ownerRow.user_id || "system") as string;
+        }
+      } catch (e) {
+        console.warn("[UNIFIED-API] Could not resolve owner for system call:", e);
+      }
+    }
+
+    const usageContext = {
+      userId: resolvedUserId,
+      edgeFunction: "unified-content-api",
+      clientId: client_id,
+      metadata: { format, source: req.headers.get("x-trigger-source") || "user" },
+    };
+
 
     const normalizedFormat = normalizeFormatKey(format);
     const formatContract = buildFormatContract(normalizedFormat);
