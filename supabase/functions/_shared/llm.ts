@@ -552,7 +552,10 @@ async function streamGemini(
     throw new LLMError("No response body from Gemini");
   }
 
-  // Transform Gemini SSE format to OpenAI format
+  // Transform Gemini SSE format to OpenAI format + capture usage from final chunk
+  let capturedInputTokens = 0;
+  let capturedOutputTokens = 0;
+
   const transformStream = new TransformStream({
     transform(chunk, controller) {
       const text = new TextDecoder().decode(chunk);
@@ -563,6 +566,11 @@ async function streamGemini(
           const data = line.slice(6).trim();
           try {
             const parsed = JSON.parse(data);
+            // Capture usage if present (usually in final chunk)
+            if (parsed.usageMetadata) {
+              capturedInputTokens = parsed.usageMetadata.promptTokenCount || capturedInputTokens;
+              capturedOutputTokens = parsed.usageMetadata.candidatesTokenCount || capturedOutputTokens;
+            }
             if (parsed.candidates?.[0]?.content?.parts?.[0]?.text) {
               const textChunk = parsed.candidates[0].content.parts[0].text;
               const openAIFormat = {
@@ -576,6 +584,12 @@ async function streamGemini(
             // Ignore parsing errors for partial chunks
           }
         }
+      }
+    },
+    async flush() {
+      // Log usage at end of stream
+      if (options.usageContext) {
+        await logUsageSafe(options.usageContext, model, capturedInputTokens, capturedOutputTokens, { streaming: true });
       }
     },
   });
