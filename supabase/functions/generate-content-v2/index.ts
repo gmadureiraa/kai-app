@@ -4,6 +4,7 @@ import { getFormatRules, UNIVERSAL_RULES } from "../_shared/format-rules.ts";
 import { getFormatDocs, getFormatChecklistFormatted, getGlobalKnowledge, getSuccessPatterns, getFullContentContext, getStructuredVoice } from "../_shared/knowledge-loader.ts";
 import { buildForbiddenPhrasesSection, UNIVERSAL_OUTPUT_RULES } from "../_shared/quality-rules.ts";
 import { selectModelForFormat } from "../_shared/prompt-builder.ts";
+import { logAIUsage, estimateTokens } from "../_shared/ai-usage.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
