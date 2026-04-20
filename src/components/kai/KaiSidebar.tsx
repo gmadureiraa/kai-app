@@ -15,6 +15,7 @@ import {
   MessageSquare,
   Home,
   Flame,
+  Twitter,
 } from "lucide-react";
 import { useDevAccess } from "@/hooks/useDevAccess";
 import { cn } from "@/lib/utils";
@@ -328,6 +329,18 @@ export function KaiSidebar({
           label="Viral Hunter"
           active={activeTab === "viral"}
           onClick={() => canUseAssistant ? onTabChange("viral") : showPermissionMessage()}
+          collapsed={collapsed}
+          disabled={!canUseAssistant}
+          showLock={!canUseAssistant}
+        />
+
+        {/* Sequência Viral — criador de carrossel estilo Twitter via KAI.
+            Mesmo gate que assistant (precisa gerar conteúdo). */}
+        <NavItem
+          icon={<Twitter className="h-4 w-4" strokeWidth={1.5} />}
+          label="Sequência Viral"
+          active={activeTab === "sequence"}
+          onClick={() => canUseAssistant ? onTabChange("sequence") : showPermissionMessage()}
           collapsed={collapsed}
           disabled={!canUseAssistant}
           showLock={!canUseAssistant}

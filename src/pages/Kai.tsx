@@ -8,6 +8,7 @@ import { KaiLibraryTab } from "@/components/kai/KaiLibraryTab";
 import { KaiAssistantTab } from "@/components/kai/KaiAssistantTab";
 import { KaiAnalyticsTab } from "@/components/kai/KaiAnalyticsTab";
 import { ViralHunterTab } from "@/components/kai/ViralHunterTab";
+import { ViralSequenceTab } from "@/components/kai/ViralSequenceTab";
 import { ClientsManagementTool } from "@/components/kai/tools/ClientsManagementTool";
 import { PlanningBoard } from "@/components/planning/PlanningBoard";
 import { SettingsTab } from "@/components/settings/SettingsTab";
@@ -115,8 +116,8 @@ export default function Kai() {
     }
 
     // Tools that don't need client (ou que precisam mas tem fallback interno).
-    // "viral" renderiza o ViralHunterTab no switch abaixo.
-    const toolTabs = ["clients", "settings", "automations", "assistant", "analytics", "home", "viral"];
+    // "viral" e "sequence" renderizam tabs customizadas no switch abaixo.
+    const toolTabs = ["clients", "settings", "automations", "assistant", "analytics", "home", "viral", "sequence"];
     
     if (toolTabs.includes(tab)) {
       switch (tab) {
@@ -179,7 +180,6 @@ export default function Kai() {
                 client={selectedClient}
                 onUseAsInspiration={(prompt) => {
                   // Leva o user pro chat com o prompt pré-preenchido via URL.
-                  // O chat lê ?prompt= no mount e envia automaticamente.
                   setSearchParams({
                     client: selectedClient.id,
                     tab: "assistant",
@@ -192,6 +192,22 @@ export default function Kai() {
             <div className="flex items-center justify-center h-full">
               <div className="text-center text-muted-foreground">
                 <p>Selecione um cliente para ver posts virais</p>
+              </div>
+            </div>
+          );
+        case "sequence":
+          return selectedClient ? (
+            <div className="h-full overflow-hidden">
+              <ViralSequenceTab
+                key={selectedClient.id}
+                clientId={selectedClient.id}
+                client={selectedClient}
+              />
+            </div>
+          ) : (
+            <div className="flex items-center justify-center h-full">
+              <div className="text-center text-muted-foreground">
+                <p>Selecione um cliente para criar carrossel</p>
               </div>
             </div>
           );
