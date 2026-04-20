@@ -222,23 +222,10 @@ export function SlideEditor({ slide, totalSlides, profile, onChange, onSlideNode
             }}
           />
           <ImageButton
-            label={slide.image.kind === "search" ? "Outra" : "Buscar"}
-            icon={
-              slide.image.kind === "search" ? (
-                <RefreshCw className="h-3 w-3" />
-              ) : (
-                <Search className="h-3 w-3" />
-              )
-            }
+            label={slide.image.kind === "search" ? "Trocar" : "Buscar"}
+            icon={<Search className="h-3 w-3" />}
             active={slide.image.kind === "search"}
-            onClick={() => {
-              if (slide.image.kind === "search") {
-                handleReShuffle();
-              } else {
-                setSearchQuery(slide.body.slice(0, 60));
-                setSearchDialogOpen(true);
-              }
-            }}
+            onClick={openSearch}
           />
           <ImageButton
             label="Upload"
