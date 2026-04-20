@@ -51,6 +51,35 @@ export const KaiAssistantTab = ({ clientId, client }: KaiAssistantTabProps) => {
   const { columns, createItem } = usePlanningItems();
   const hasPlanningAccess = columns.length > 0;
 
+  // Busca a conversa mais recente do cliente (pra persistir histórico ao
+  // trocar entre clientes ou recarregar a página). Se não houver nenhuma,
+  // `data` é null e o hook cria uma nova no primeiro envio.
+  const { data: latestConversationId } = useQuery<string | null>({
+    queryKey: ["kai-latest-conversation", clientId],
+    queryFn: async () => {
+      if (!clientId) return null;
+      const { data: userResp } = await supabase.auth.getUser();
+      const userId = userResp?.user?.id;
+      if (!userId) return null;
+      const { data, error } = await supabase
+        .from("kai_chat_conversations")
+        .select("id")
+        .eq("user_id", userId)
+        .eq("client_id", clientId)
+        .order("updated_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (error) {
+        console.warn("[KaiAssistantTab] latest conversation query failed:", error);
+        return null;
+      }
+      return data?.id ?? null;
+    },
+    enabled: !!clientId,
+    // não stale — trocar cliente refetcha
+    staleTime: 0,
+  });
+
   // Use the simplified chat hook — all intelligence lives on the backend
   const {
     messages,
@@ -58,7 +87,18 @@ export const KaiAssistantTab = ({ clientId, client }: KaiAssistantTabProps) => {
     sendMessage: baseSendMessage,
     clearHistory,
     conversationId,
-  } = useKAISimpleChat({ clientId });
+  } = useKAISimpleChat({
+    clientId,
+    conversationId: latestConversationId ?? null,
+    onConversationCreated: (id) => {
+      // quando uma nova conversa é criada (primeiro envio), invalida a
+      // query pra próxima montagem do componente achar essa como a mais recente.
+      queryClient.invalidateQueries({
+        queryKey: ["kai-latest-conversation", clientId],
+      });
+      void id;
+    },
+  });
 
   // Content & reference libraries for citation feature in FloatingInput
   const { data: contentLibrary = [] } = useQuery({

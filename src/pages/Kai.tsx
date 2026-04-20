@@ -152,7 +152,14 @@ export default function Kai() {
         case "assistant":
           return selectedClient ? (
             <div className="h-full overflow-hidden">
-              <KaiAssistantTab clientId={selectedClient.id} client={selectedClient} />
+              {/* key={selectedClient.id} força remount ao trocar de cliente,
+                  garantindo zero state residual (mensagens, conversationId)
+                  do cliente anterior. Cada cliente tem seu próprio chat. */}
+              <KaiAssistantTab
+                key={selectedClient.id}
+                clientId={selectedClient.id}
+                client={selectedClient}
+              />
             </div>
           ) : (
             <div className="flex items-center justify-center h-full">
