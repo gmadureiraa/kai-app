@@ -21,11 +21,12 @@ import {
   Search,
   Upload,
   X,
-  RefreshCw,
   ImageIcon,
   Rocket,
   Flag,
   Target,
+  Loader2,
+  ExternalLink,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -60,6 +61,9 @@ export function SlideEditor({ slide, totalSlides, profile, onChange, onSlideNode
   const [aiDialogOpen, setAiDialogOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [aiPrompt, setAiPrompt] = useState("");
+  const [searchResults, setSearchResults] = useState<ImageSearchResult[]>([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [searchSource, setSearchSource] = useState<"pexels" | "openverse">("pexels");
 
   const setImage = (image: ImageSource) =>
     onChange({ ...slide, image });
@@ -79,21 +83,47 @@ export function SlideEditor({ slide, totalSlides, profile, onChange, onSlideNode
     reader.readAsDataURL(file);
   };
 
-  const handleSearch = () => {
-    const q = searchQuery.trim() || slide.body.slice(0, 40);
-    if (!q) {
+  const runSearch = async (q: string, source: "pexels" | "openverse" = searchSource) => {
+    if (!q.trim()) {
       toast.error("Informe um termo pra buscar.");
       return;
     }
-    const url = searchImage(q);
-    setImage({ kind: "search", query: q, url });
-    setSearchDialogOpen(false);
-    toast.success("Imagem encontrada. Clica de novo no ícone pra trocar.");
+    setSearchLoading(true);
+    try {
+      const res = await searchImages(q, { perPage: 12, source });
+      setSearchResults(res.items);
+      setSearchSource(res.source);
+      if (res.items.length === 0) {
+        toast.info("Nenhuma imagem encontrada — tente outro termo (em inglês geralmente rende mais).");
+      }
+    } catch (err) {
+      toast.error(`Falha na busca: ${(err as Error).message}`);
+    } finally {
+      setSearchLoading(false);
+    }
   };
 
-  const handleReShuffle = () => {
-    if (slide.image.kind !== "search") return;
-    setImage({ ...slide.image, url: searchImage(slide.image.query) });
+  const pickImage = (item: ImageSearchResult) => {
+    setImage({
+      kind: "search",
+      query: searchQuery.trim() || slide.body.slice(0, 40),
+      url: item.url,
+      attribution: item.attribution,
+      sourceUrl: item.sourceUrl,
+    } as ImageSource);
+    setSearchDialogOpen(false);
+    toast.success("Imagem aplicada ao slide.");
+  };
+
+  const openSearch = () => {
+    const initial = slide.body.slice(0, 60);
+    setSearchQuery(initial);
+    setSearchResults([]);
+    setSearchDialogOpen(true);
+    // Auto-busca ao abrir, se houver termo
+    if (initial.trim()) {
+      void runSearch(initial);
+    }
   };
 
   const handleAiStub = () => {
