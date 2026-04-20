@@ -1086,7 +1086,7 @@ async function generatePlanningCards(
   supabase: any, client: any, clientId: string, workspaceId: string,
   userId: string, intent: PlanningIntent, authHeader: string, userInstructions?: UserInstructions
 ): Promise<any[]> {
-  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+  const GOOGLE_API_KEY = Deno.env.get("GOOGLE_AI_STUDIO_API_KEY");
   
   if (!workspaceId) throw new Error("Cliente não está associado a um workspace");
   
@@ -1175,7 +1175,7 @@ async function generatePlanningCards(
     }
   }
   
-  if (LOVABLE_API_KEY && (intent.topic || urlContext || intent.analyzeFirst)) {
+  if (GOOGLE_API_KEY && (intent.topic || urlContext || intent.analyzeFirst)) {
     const platformInstructions: Record<string, string> = {
       instagram: "Posts para Instagram: hook forte, máximo 2200 chars, poucos emojis, estrutura clara",
       twitter: "Tweets: MÁXIMO 280 caracteres, ZERO emojis no corpo, ZERO hashtags, gancho forte",
@@ -1220,18 +1220,21 @@ ${platformInstructions[intent.platform || "instagram"] || ""}
 Responda APENAS com JSON: { "cards": [{ "title": "título curto", "description": "CONTEÚDO COMPLETO com tópicos detalhados" }] }`;
 
     try {
-      const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: "google/gemini-3-flash-preview",
-          messages: [{ role: "user", content: prompt }],
-        }),
-      });
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GOOGLE_API_KEY}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [{ role: "user", parts: [{ text: prompt }] }],
+            generationConfig: { temperature: 0.8, maxOutputTokens: 4096 },
+          }),
+        }
+      );
 
       if (response.ok) {
         const data = await response.json();
-        const text = data.choices?.[0]?.message?.content || "";
+        const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
         const jsonMatch = text.match(/\{[\s\S]*"cards"[\s\S]*\}/);
         if (jsonMatch) {
           const parsed = JSON.parse(jsonMatch[0]);
@@ -1420,19 +1423,26 @@ async function fetchKnowledgeContext(
   supabase: any, workspaceId: string, query: string
 ): Promise<string> {
   try {
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) return "";
+    const GOOGLE_API_KEY = Deno.env.get("GOOGLE_AI_STUDIO_API_KEY");
+    if (!GOOGLE_API_KEY) return "";
 
-    // Generate embedding for the query
-    const embeddingResponse = await fetch("https://ai.gateway.lovable.dev/v1/embeddings", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ model: "text-embedding-3-small", input: query, dimensions: 768 }),
-    });
+    // Generate embedding for the query (Gemini text-embedding-004 → 768 dims)
+    const embeddingResponse = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent?key=${GOOGLE_API_KEY}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "models/text-embedding-004",
+          content: { parts: [{ text: query }] },
+          outputDimensionality: 768,
+        }),
+      }
+    );
 
     if (!embeddingResponse.ok) return "";
     const embeddingData = await embeddingResponse.json();
-    const queryEmbedding = embeddingData.data?.[0]?.embedding;
+    const queryEmbedding = embeddingData?.embedding?.values;
     if (!queryEmbedding) return "";
 
     const { data: results, error } = await supabase.rpc("search_knowledge_semantic", {
