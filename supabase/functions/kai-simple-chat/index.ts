@@ -1991,6 +1991,10 @@ SIGA RIGOROSAMENTE a ordem de prioridade:
         { listPendingApprovalsTool },
         { getClientContextTool },
         { searchLibraryTool },
+        { publishNowTool },
+        { scheduleForTool },
+        { connectAccountTool },
+        { getMetricsTool },
       ] = await Promise.all([
         import("./tools/index.ts"),
         import("../_shared/kai-stream.ts"),
@@ -2000,6 +2004,10 @@ SIGA RIGOROSAMENTE a ordem de prioridade:
         import("./tools/listPendingApprovals.ts"),
         import("./tools/getClientContext.ts"),
         import("./tools/searchLibrary.ts"),
+        import("./tools/publishNow.ts"),
+        import("./tools/scheduleFor.ts"),
+        import("./tools/connectAccount.ts"),
+        import("./tools/getMetrics.ts"),
       ]);
 
       const registry = new ToolRegistry();
@@ -2009,6 +2017,10 @@ SIGA RIGOROSAMENTE a ordem de prioridade:
       registry.register(listPendingApprovalsTool);
       registry.register(getClientContextTool);
       registry.register(searchLibraryTool);
+      registry.register(publishNowTool);
+      registry.register(scheduleForTool);
+      registry.register(connectAccountTool);
+      registry.register(getMetricsTool);
 
       const stream = new ReadableStream<Uint8Array>({
         async start(controller) {

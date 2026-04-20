@@ -31,3 +31,4 @@ export { searchLibraryTool } from "./searchLibrary.ts";
 export { publishNowTool } from "./publishNow.ts";
 export { scheduleForTool } from "./scheduleFor.ts";
 export { connectAccountTool } from "./connectAccount.ts";
+export { getMetricsTool } from "./getMetrics.ts";
