@@ -33,7 +33,7 @@ serve(async (req) => {
     }
 
     const body = await req.json();
-    const { url, base64, mimeType, fileName } = body;
+    const { url, base64, mimeType, fileName, userId, clientId } = body;
 
     if (!url && !base64) {
       throw new Error('URL ou base64 é obrigatório');
