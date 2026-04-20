@@ -258,36 +258,108 @@ export function SlideEditor({ slide, totalSlides, profile, onChange, onSlideNode
         </div>
       </div>
 
-      {/* Dialog: buscar imagem */}
+      {/* Dialog: buscar imagem (galeria) */}
       <Dialog open={searchDialogOpen} onOpenChange={setSearchDialogOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-3xl max-h-[85vh] flex flex-col">
           <DialogHeader>
             <DialogTitle>Buscar imagem</DialogTitle>
             <DialogDescription>
-              Busca via Unsplash — qualquer termo funciona (em inglês geralmente rende mais resultados).
+              Fonte: <strong>{searchSource === "pexels" ? "Pexels" : "Openverse (Creative Commons)"}</strong>.
+              Clica numa miniatura para aplicar ao slide. Termos em inglês geralmente rendem mais resultados.
             </DialogDescription>
           </DialogHeader>
-          <Input
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="ex: bitcoin, laptop, sunset..."
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                handleSearch();
-              }
-            }}
-          />
+
+          <div className="flex items-center gap-2">
+            <Input
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="ex: bitcoin, laptop, sunset, escritorio..."
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  void runSearch(searchQuery);
+                }
+              }}
+            />
+            <Button onClick={() => void runSearch(searchQuery)} disabled={!searchQuery.trim() || searchLoading}>
+              {searchLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+              Buscar
+            </Button>
+          </div>
+
+          <div className="flex items-center gap-2 text-xs">
+            <span className="text-muted-foreground">Fonte:</span>
+            <Button
+              size="sm"
+              variant={searchSource === "pexels" ? "default" : "outline"}
+              className="h-7 text-xs"
+              onClick={() => {
+                setSearchSource("pexels");
+                if (searchQuery.trim()) void runSearch(searchQuery, "pexels");
+              }}
+            >
+              Pexels
+            </Button>
+            <Button
+              size="sm"
+              variant={searchSource === "openverse" ? "default" : "outline"}
+              className="h-7 text-xs"
+              onClick={() => {
+                setSearchSource("openverse");
+                if (searchQuery.trim()) void runSearch(searchQuery, "openverse");
+              }}
+            >
+              Openverse (CC)
+            </Button>
+          </div>
+
+          <div className="flex-1 overflow-y-auto -mx-6 px-6 min-h-[300px]">
+            {searchLoading && (
+              <div className="flex items-center justify-center h-64 text-muted-foreground">
+                <Loader2 className="h-6 w-6 animate-spin" />
+              </div>
+            )}
+            {!searchLoading && searchResults.length === 0 && (
+              <div className="flex items-center justify-center h-64 text-sm text-muted-foreground">
+                {searchQuery.trim() ? "Nenhum resultado. Tente outro termo." : "Digite um termo e clique em Buscar."}
+              </div>
+            )}
+            {!searchLoading && searchResults.length > 0 && (
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {searchResults.map((item) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => pickImage(item)}
+                    className="group relative aspect-video rounded-md overflow-hidden border border-border/40 hover:border-primary hover:ring-2 hover:ring-primary/40 transition-all bg-muted"
+                    title={item.attribution}
+                  >
+                    <img
+                      src={item.thumbnail}
+                      alt={item.attribution}
+                      loading="lazy"
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                    />
+                    <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <p className="text-[10px] text-white truncate flex items-center gap-1">
+                        <ExternalLink className="h-2.5 w-2.5 shrink-0" />
+                        {item.attribution || "Sem atribuição"}
+                      </p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
           <DialogFooter>
             <Button variant="ghost" onClick={() => setSearchDialogOpen(false)}>
-              Cancelar
-            </Button>
-            <Button onClick={handleSearch} disabled={!searchQuery.trim()}>
-              Buscar
+              Fechar
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
 
       {/* Dialog: IA (stub) */}
       <Dialog open={aiDialogOpen} onOpenChange={setAiDialogOpen}>
