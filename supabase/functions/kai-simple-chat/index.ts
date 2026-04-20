@@ -1982,15 +1982,33 @@ SIGA RIGOROSAMENTE a ordem de prioridade:
     // O frontend ativa passando ?tools=1 na URL → hook envia useTools:true.
     if (body.useTools && shouldStream) {
       console.log("[kai-simple-chat] 🔧 tool-calling mode ON — using runToolLoop");
-      const [{ ToolRegistry, runToolLoop }, { createKAIEmitter }, { echoTool }] =
-        await Promise.all([
-          import("./tools/index.ts"),
-          import("../_shared/kai-stream.ts"),
-          import("./tools/echo.ts"),
-        ]);
+      const [
+        { ToolRegistry, runToolLoop },
+        { createKAIEmitter },
+        { echoTool },
+        { createContentTool },
+        { editContentTool },
+        { listPendingApprovalsTool },
+        { getClientContextTool },
+        { searchLibraryTool },
+      ] = await Promise.all([
+        import("./tools/index.ts"),
+        import("../_shared/kai-stream.ts"),
+        import("./tools/echo.ts"),
+        import("./tools/createContent.ts"),
+        import("./tools/editContent.ts"),
+        import("./tools/listPendingApprovals.ts"),
+        import("./tools/getClientContext.ts"),
+        import("./tools/searchLibrary.ts"),
+      ]);
 
       const registry = new ToolRegistry();
       registry.register(echoTool);
+      registry.register(createContentTool);
+      registry.register(editContentTool);
+      registry.register(listPendingApprovalsTool);
+      registry.register(getClientContextTool);
+      registry.register(searchLibraryTool);
 
       const stream = new ReadableStream<Uint8Array>({
         async start(controller) {

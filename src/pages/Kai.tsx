@@ -35,6 +35,44 @@ export default function Kai() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
+  // Atalhos globais de teclado — funcionam em qualquer tab.
+  // ⌘K / Ctrl+K → pula pro chat KAI (assistant)
+  // ⌘J / Ctrl+J → pula pra Sequência Viral
+  // ⌘I / Ctrl+I → pula pro Viral Hunter
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (!(e.metaKey || e.ctrlKey)) return;
+      const target = e.target as HTMLElement | null;
+      const inEditable =
+        target &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.isContentEditable);
+      // Não bloqueia Cmd+K em inputs (é o padrão universal de "command menu")
+      // mas ignora Cmd+J/I em inputs (podem conflitar com atalhos do browser)
+      const key = e.key.toLowerCase();
+      if (key === "k") {
+        if (inEditable) return;
+        e.preventDefault();
+        const params = new URLSearchParams(searchParams);
+        params.set("tab", "assistant");
+        setSearchParams(params);
+      } else if (key === "j" && !inEditable) {
+        e.preventDefault();
+        const params = new URLSearchParams(searchParams);
+        params.set("tab", "sequence");
+        setSearchParams(params);
+      } else if (key === "i" && !inEditable) {
+        e.preventDefault();
+        const params = new URLSearchParams(searchParams);
+        params.set("tab", "viral");
+        setSearchParams(params);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [searchParams, setSearchParams]);
+
   // Route protection: redirect to allowed tabs if trying to access unauthorized ones
   useEffect(() => {
     let shouldRedirect = false;

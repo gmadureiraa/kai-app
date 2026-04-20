@@ -21,3 +21,13 @@ export {
   type GeminiStreamResponse,
   type RunToolLoopOptions,
 } from "./runner.ts";
+
+export { echoTool } from "./echo.ts";
+export { createContentTool } from "./createContent.ts";
+export { editContentTool } from "./editContent.ts";
+export { listPendingApprovalsTool } from "./listPendingApprovals.ts";
+export { getClientContextTool } from "./getClientContext.ts";
+export { searchLibraryTool } from "./searchLibrary.ts";
+export { publishNowTool } from "./publishNow.ts";
+export { scheduleForTool } from "./scheduleFor.ts";
+export { connectAccountTool } from "./connectAccount.ts";
