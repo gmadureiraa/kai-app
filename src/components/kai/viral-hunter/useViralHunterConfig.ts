@@ -10,7 +10,7 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import type { ViralHunterConfig, Competitor } from "./types";
+import type { ViralHunterConfig, CompetitorEntry } from "./types";
 
 async function fetchConfig(clientId: string): Promise<ViralHunterConfig> {
   const [{ data: kws, error: kErr }, { data: comps, error: cErr }] = await Promise.all([
