@@ -97,14 +97,16 @@ export async function loadCarousel(id: string): Promise<ViralCarousel | null> {
   if (error) throw error;
   if (!data) return null;
 
-  const slides = Array.isArray(data.slides) ? (data.slides as ViralCarousel["slides"]) : [];
+  const slides = Array.isArray(data.slides)
+    ? (data.slides as unknown as ViralCarousel["slides"])
+    : [];
   return {
     id: data.id as string,
     clientId: data.client_id as string,
     title: (data.title as string) ?? "Carrossel",
     template: ((data.template as string) ?? "twitter") as ViralCarousel["template"],
     slides: slides.map(migrateSlide),
-    profile: (data.profile as ViralCarousel["profile"]) ?? { name: "", handle: "" },
+    profile: (data.profile as unknown as ViralCarousel["profile"]) ?? { name: "", handle: "" },
     briefing: (data.briefing as string) ?? undefined,
     status: ((data.status as string) ?? "draft") as ViralCarousel["status"],
     createdAt: data.created_at as string,
@@ -116,8 +118,6 @@ export async function saveCarousel(
   carousel: ViralCarousel,
   context: { workspaceId: string; userId: string },
 ): Promise<ViralCarousel> {
-  // Verifica se já existe (id é o que está no estado local; pode ser um id
-  // gerado localmente que ainda não tem registro no DB)
   const { data: existing } = await supabase
     .from("viral_carousels")
     .select("id")
@@ -131,8 +131,8 @@ export async function saveCarousel(
     title: carousel.title,
     briefing: carousel.briefing ?? null,
     template: carousel.template,
-    profile: carousel.profile as unknown as Record<string, unknown>,
-    slides: carousel.slides as unknown as Record<string, unknown>[],
+    profile: carousel.profile as unknown as never,
+    slides: carousel.slides as unknown as never,
     status: carousel.status,
   };
 
@@ -146,11 +146,9 @@ export async function saveCarousel(
     if (error) throw error;
     return { ...carousel, updatedAt: data.updated_at as string };
   } else {
-    // crypto.randomUUID gera um id válido pro Postgres
-    const insertPayload = { ...payload, id: carousel.id };
     const { data, error } = await supabase
       .from("viral_carousels")
-      .insert(insertPayload)
+      .insert({ ...payload, id: carousel.id })
       .select()
       .single();
     if (error) throw error;
