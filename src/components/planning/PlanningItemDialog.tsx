@@ -576,7 +576,48 @@ export function PlanningItemDialog({
           )}>
             {/* LEFT: Content area */}
             <div className="p-6 space-y-4 overflow-y-auto border-r border-border/30">
-              {/* Reference / AI generation - Collapsible */}
+              {/* Viral Carousel banner — quick jump to Sequência Viral editor */}
+              {(() => {
+                const meta = (effectiveItem?.metadata as any) || {};
+                const viralCarouselId: string | undefined = meta.viral_carousel_id;
+                const viralSlides: Array<{ body: string }> | undefined = meta.viral_carousel_slides;
+                const isViral = meta.content_type === 'viral_carousel' || !!viralCarouselId;
+                if (!isViral || !selectedClientId) return null;
+                return (
+                  <div className="rounded-lg border border-sky-500/30 bg-gradient-to-br from-sky-500/10 via-sky-500/5 to-background p-3 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <Layers className="h-4 w-4 text-sky-600 dark:text-sky-400" />
+                      <span className="text-xs font-semibold text-sky-700 dark:text-sky-400">
+                        Carrossel Viral · {viralSlides?.length ?? 8} slides
+                      </span>
+                    </div>
+                    {viralSlides && viralSlides[0]?.body && (
+                      <p className="text-xs text-muted-foreground line-clamp-2">
+                        {viralSlides[0].body.replace(/\*\*(.+?)\*\*/g, '$1')}
+                      </p>
+                    )}
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="h-7 text-xs gap-1.5 border-sky-500/40 hover:bg-sky-500/10"
+                      onClick={() => {
+                        const params = new URLSearchParams({
+                          client: selectedClientId,
+                          tab: 'sequence',
+                        });
+                        if (viralCarouselId) params.set('carouselId', viralCarouselId);
+                        navigate(`/kaleidos?${params.toString()}`);
+                        onOpenChange(false);
+                      }}
+                    >
+                      <ExternalLink className="h-3 w-3" />
+                      Editar no Sequência Viral
+                    </Button>
+                  </div>
+                );
+              })()}
+
               <details className="group">
                 <summary className="flex items-center gap-1.5 p-2.5 bg-muted/30 rounded-lg border border-dashed border-border/50 cursor-pointer hover:bg-muted/50 transition-colors text-xs text-muted-foreground font-medium select-none">
                   <Wand2 className="h-3 w-3 shrink-0" />
