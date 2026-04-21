@@ -2027,6 +2027,7 @@ SIGA RIGOROSAMENTE a ordem de prioridade:
       const registry = new ToolRegistry();
       registry.register(echoTool);
       registry.register(createContentTool);
+      registry.register(createViralCarouselTool);
       registry.register(editContentTool);
       registry.register(listPendingApprovalsTool);
       registry.register(getClientContextTool);
