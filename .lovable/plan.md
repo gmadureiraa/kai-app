@@ -1,77 +1,104 @@
 
 
-# Plano: integrar Viral Hunter + Sequência Viral, corrigir build e fechar pontas soltas
+# Plano: Carrosséis "Viral Sequence" integrados em Automações, Chat KAI e Planejamento
 
-Você subiu duas features grandes pelo GitHub (Viral Hunter com 6 sub-tabs + Sequência Viral com carrossel estilo Twitter) e um servidor MCP. Tem **um erro de build bloqueante** e **vários pontos meio-implementados** que precisam virar funcionais. Aqui está o que faço:
+## Visão geral
 
-## 1. Corrigir o build (bloqueante)
+Hoje a Sequência Viral é uma ilha: gera carrossel manualmente na aba dela e exporta PNG/PDF. Vou conectá-la em três lugares: **Automações** (criar carrossel viral agendado/RSS), **Chat KAI** (ferramenta `create_viral_carousel`), e **Planejamento** (card mostra preview do carrossel viral, botão "Editar no Sequência Viral" abre o editor com os dados, e vice-versa: botão "Mandar pro planejamento" no editor cria card).
 
-O `supabase/functions/mcp-reader/index.ts` importa `npm:mcp-lite@^0.10.0` mas não tem `deno.json` declarando dependências, então o Deno não consegue resolver.
+Tudo usa o mesmo motor: `kai-content-agent` com o briefing do cliente (identity_guide, voice profile, content guidelines) — então a IA já entende a marca.
 
-**Fix**: criar `supabase/functions/mcp-reader/deno.json` com import map declarando `mcp-lite` e `hono`, e adicionar bloco `[functions.mcp-reader]` no `supabase/config.toml` com `verify_jwt = false` (autenticação já é feita por `MCP_ACCESS_TOKEN` no header). Faço deploy e valido.
+## 1. Backbone: schema + edge function unificada
 
-## 2. Corrigir bug latente da Sequência Viral
+### 1.1 Migração no `viral_carousels`
+Adicionar coluna `planning_item_id uuid` (FK opcional pra `planning_items`, nullable, ON DELETE SET NULL) + índice. Esse é o link bidirecional: um carrossel pode estar "anexado" a um card do planejamento.
 
-`ViralSequenceTab.tsx` lê `s.heading.trim()` em 2 lugares (linhas 102, 238) mas `heading` agora é `@deprecated` e opcional no tipo — qualquer carrossel novo vai dar `Cannot read properties of undefined`. Troco por `(s.heading?.trim() || s.body.trim())` e atualizo os comentários de doc que ainda falam de "heading + body".
+Adicionar também coluna `source text` (`'manual' | 'automation' | 'chat'`) pra rastreabilidade.
 
-## 3. Persistir Viral Hunter no Supabase (sair do `tags` JSON)
+### 1.2 Nova edge function `generate-viral-carousel`
+Centraliza a geração de carrosséis Twitter-style — chamada por automações, chat e UI manual. Recebe:
+```
+{ clientId, briefing, tone?, slideCount?, profile?, persistAs?: 'planning' | 'carousel' | 'both' }
+```
+Internamente: chama `kai-content-agent` com o prompt já calibrado (mesmo do `generateCopy.ts` atual, mas no servidor), parseia os 8 slides, e dependendo de `persistAs` grava em `viral_carousels` e/ou cria `planning_item` com `content_type='carousel'` + `metadata.viral_carousel_id` + `metadata.carousel_slides` (formato compatível com o que `process-automations` já espera).
 
-Hoje as keywords/concorrentes vivem em `clients.tags.viral_hunter` como string JSON — funciona, mas é frágil (sobrescreve outras tags se outro lugar editar) e impede queries cross-cliente. Migro pra duas tabelas dedicadas:
+Isso elimina duplicação: hoje a UI tem a lógica de prompt no client (`generateCopy.ts`), e o `process-automations` tem outra parecida. As duas passam a chamar essa função.
 
-- `client_viral_keywords` (id, client_id, keyword, created_at) com unique(client_id, keyword)
-- `client_viral_competitors` (id, client_id, platform, handle, notes, added_at)
+## 2. Automações: novo content_type `viral_carousel`
 
-Ambas com RLS via `client_workspace_accessible(client_id, auth.uid())`. Reescrevo `useViralHunterConfig.ts` pra ler/gravar nessas tabelas mantendo a mesma API pública (componentes não mudam). Migração de dados existentes do `tags` no SQL inicial.
+### 2.1 No `AutomationDialog`
+Adicionar opção "Carrossel Viral (estilo Twitter)" no select de `content_type`. Quando selecionado:
+- Mostra textarea de briefing (igual hoje), mas avisa "8 slides, formato tweet"
+- Esconde campos irrelevantes (tipo "imagem por slide" — porque cada slide já é um tweet card visual)
+- Mostra checkbox "Gerar imagens por slide" (opcional — usa `image_pool_folder` ou geração IA)
 
-## 4. Persistir Sequência Viral no Supabase
+### 2.2 No `process-automations/index.ts`
+Adicionar branch novo: quando `automation.content_type === 'viral_carousel'`, chamar `generate-viral-carousel` em vez do fluxo de prompt normal. Essa função já cria o `planning_item` com `metadata.viral_carousel_id` apontando pro registro persistido em `viral_carousels` (status `draft`). Comportamento auto-publish/revisão continua igual ao carrossel normal — vai pra "Revisão" se `auto_publish=false`.
 
-Hoje o `storage.ts` salva só em `sessionStorage` — perde tudo se trocar de aba/dispositivo. Crio:
+## 3. Chat KAI: ferramenta `create_viral_carousel`
 
-- `viral_carousels` (id, client_id, workspace_id, user_id, title, briefing, profile jsonb, slides jsonb, status, created_at, updated_at) com RLS por workspace.
+Em `supabase/functions/kai-simple-chat/tools/`, criar `createViralCarousel.ts` análogo ao `createContent.ts`:
+- Tool exposta pro agente com schema `{ briefing, tone?, addToPlanning?: boolean }`
+- Handler chama `generate-viral-carousel` com `persistAs: addToPlanning ? 'both' : 'carousel'`
+- Retorna `{ carouselId, planningItemId?, slides, previewUrl }` pro chat renderizar bubble especial
 
-`storage.ts` vira async (load/save/list contra Supabase com fallback pro sessionStorage como cache otimista). Adiciono na UI: botão "Salvar" deixa de ser stub e grava de verdade; uma lista lateral "Carrosséis salvos" com possibilidade de retomar/deletar.
+Bubble no chat: card compacto com mini-thumb dos 8 slides + 2 botões — "Abrir no Sequência Viral" e "Ver no Planejamento". Reusa o `TwitterSlide` em mini-scale.
 
-## 5. Mover YouTube API key pra backend (segurança)
+## 4. Planejamento ↔ Sequência Viral: navegação bidirecional
 
-Hoje `useYouTubeSearch.ts` usa `import.meta.env.VITE_YT_API_KEY` no client — chave fica exposta no bundle. Crio edge function `youtube-search` que recebe `{ query, publishedAfter, order, maxResults }`, valida JWT, chama YouTube Data API v3 com `YT_API_KEY` server-side, e retorna a lista normalizada. O hook passa a chamar essa função. Mesmo tratamento pra Google News (`google-news-search`) — `rss2json.com` é proxy de terceiro frágil; faço parsing direto do RSS no edge function com `DOMParser` do Deno.
+### 4.1 Card de planejamento detecta carrossel viral
+No `PlanningItemCard` e `PlanningItemDialog`, quando `metadata.viral_carousel_id` existir:
+- Card mostra badge azul "Carrossel Viral" + thumb do slide 1
+- No dialog, em vez do `RichContentEditor`, renderiza um preview compacto + botão **"Editar no Sequência Viral"** que faz `navigate(/kaleidos?client=X&tab=sequence&carouselId=Y)`
 
-## 6. Pequenas melhorias na Sequência Viral
+### 4.2 Sequência Viral abre carrossel via URL
+`ViralSequenceTab` lê `?carouselId=` da URL: se presente, chama `loadCarousel(id)` em vez de carregar rascunho local. Assim o ida-e-volta funciona.
 
-- `imageSearch.ts` usa `source.unsplash.com` que **foi descontinuado** (retorna 503 hoje). Troco por edge function `unsplash-search` usando a API oficial (`UNSPLASH_ACCESS_KEY`) retornando 6 thumbnails pra galeria, em vez de 1 imagem aleatória.
-- Conectar botão "Publicar" à integração LATE existente (publica os 8 slides como carrossel no Instagram/X).
+### 4.3 Botão "Mandar pro Planejamento" no editor
+Substitui o `handleSaveStub` atual por menu real:
+- **Salvar carrossel** → grava em `viral_carousels` (já implementado mas nunca chamado)
+- **Mandar pro Planejamento** → grava + cria `planning_item` (status `draft`, coluna "Rascunho") com `metadata.viral_carousel_id` apontando de volta. Toast com link "Abrir card".
+- **Sincronizar com card existente** → se já tem `planning_item_id`, regrava o conteúdo no card (slides como `metadata.carousel_slides`).
 
-## 7. QA e validação
+### 4.4 Botão "Publicar via LATE" funcional
+Conecta ao `late-post` existente. Exporta os 8 slides como PNGs (já tem `exportCarouselAsPngs`), faz upload pra `client-files` storage, e dispara LATE com plataforma Instagram/X. Reusa o fluxo do `process-automations` pra carrossel.
 
-- Compilar TypeScript local pra confirmar zero erros.
-- Deploy de todas edge functions novas/modificadas.
-- Testar cada sub-tab do Viral Hunter end-to-end: adicionar keyword → ver YouTube/News → mandar pro KAI.
-- Testar Sequência Viral: gerar → editar → salvar no DB → recarregar página e ver que voltou.
+## 5. UI da Sequência Viral: lista de salvos
 
-## Secrets necessários
+Sidebar lateral colapsável no `ViralSequenceTab` com lista de carrosséis salvos do cliente (`listSavedCarousels` já existe). Cada item: título, status, data, ações (abrir, deletar, duplicar). Quando clica em "Novo", limpa estado e zera URL param.
 
-Vou pedir via tool de secrets: `YT_API_KEY` e `UNSPLASH_ACCESS_KEY` (se ainda não estiverem configurados).
+## 6. QA e validação
+
+- Compilar TS, deploy de `generate-viral-carousel` e do `kai-simple-chat` atualizado
+- Testar end-to-end:
+  1. Chat: pedir "cria um carrossel viral sobre X" → ver bubble com slides → clicar "Abrir no Sequência Viral" → editar → mandar pro planejamento → ver card no kanban
+  2. Automação: criar uma com `content_type=viral_carousel`, rodar manualmente, ver card aparecer em Revisão com slides
+  3. Sequência Viral: criar do zero → salvar → recarregar → ver na lista lateral → mandar pro planejamento
 
 ## Resumo técnico
 
 ```text
-NEW FILES
-  supabase/functions/mcp-reader/deno.json                 (fix build)
-  supabase/functions/youtube-search/index.ts              (proxy + log AI/cost)
-  supabase/functions/google-news-search/index.ts          (RSS proxy)
-  supabase/functions/unsplash-search/index.ts             (galeria)
-  + 2 migrations: viral_keywords/competitors + viral_carousels
+NEW
+  supabase/migrations/<ts>_viral_carousel_planning_link.sql  (planning_item_id, source)
+  supabase/functions/generate-viral-carousel/index.ts        (motor central)
+  supabase/functions/kai-simple-chat/tools/createViralCarousel.ts
+  src/components/kai/viral-sequence/SavedCarouselsSidebar.tsx
+  src/components/kai/viral-sequence/PublishLateDialog.tsx
 
 EDITED
-  supabase/config.toml                                    (+ mcp-reader block)
-  src/components/kai/viral-hunter/useViralHunterConfig.ts (DB-backed)
-  src/components/kai/viral-hunter/useYouTubeSearch.ts     (call edge)
-  src/components/kai/viral-hunter/useGoogleNews.ts        (call edge)
-  src/components/kai/viral-sequence/storage.ts            (async + Supabase)
-  src/components/kai/viral-sequence/imageSearch.ts        (edge function)
-  src/components/kai/ViralSequenceTab.tsx                 (heading bug fix +
-                                                          save/load real +
-                                                          publish via LATE)
+  supabase/functions/process-automations/index.ts            (+ branch viral_carousel)
+  supabase/functions/kai-simple-chat/index.ts                (+ tool registration)
+  src/types/contentTypes.ts                                  (+ viral_carousel option)
+  src/components/planning/AutomationDialog.tsx               (+ opção viral_carousel)
+  src/components/planning/PlanningItemCard.tsx               (badge + thumb)
+  src/components/planning/PlanningItemDialog.tsx             (botão "Editar no SV")
+  src/components/kai/ViralSequenceTab.tsx                    (URL param, save real,
+                                                              publish real, sidebar)
+  src/components/kai/viral-sequence/generateCopy.ts          (passa a chamar
+                                                              generate-viral-carousel)
+  src/hooks/useKAISimpleChat.ts                              (renderizar bubble do
+                                                              carrossel viral)
 ```
 
-Não toco no logging de IA que arrumamos antes — todas edge functions novas já vão chamar `logAIUsage` quando consumirem LLM.
+Sem secrets novos — usa `LOVABLE_API_KEY` (já presente) e `LATE_API_KEY` (já presente).
 
