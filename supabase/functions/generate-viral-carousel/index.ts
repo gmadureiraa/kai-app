@@ -52,7 +52,8 @@ interface ViralSlide {
   id: string;
   order: number;
   body: string;
-  image: { kind: "none" };
+  image: { kind: "none" } | { kind: "search"; query: string; url: string; attribution?: string };
+  imageAsCover?: boolean;
 }
 
 interface RequestBody {
@@ -65,6 +66,9 @@ interface RequestBody {
   title?: string;
   source?: "manual" | "automation" | "chat";
   automationId?: string;
+  /** Se fornecido, vira capa do slide 1 com imageAsCover=true. */
+  coverImageUrl?: string | null;
+  coverImageAttribution?: string | null;
 }
 
 function buildPrompt(briefing: string, slideCount: number, tone?: string): string {
