@@ -996,9 +996,19 @@ serve(async (req) => {
 
     console.log(`Found ${automations?.length || 0} automation(s) to process`);
 
+    // ========================================================
+    // MANUAL TEST (frontend trigger): roda em background pra
+    // não estourar o timeout do client/gateway. A automação
+    // pode levar 30s-3min se gerar texto + imagens.
+    // Usa EdgeRuntime.waitUntil pra manter o runtime vivo
+    // até terminar, retornando 202 imediatamente.
+    // ========================================================
+    const automationsList = (automations as PlanningAutomation[]) || [];
     const results: { id: string; name: string; triggered: boolean; error?: string; runId?: string }[] = [];
 
-    for (const automation of (automations as PlanningAutomation[]) || []) {
+    const runLoop = async () => {
+      for (const automation of automationsList) {
+
       const startTime = Date.now();
       let runId: string | null = null;
       
@@ -2297,7 +2307,26 @@ serve(async (req) => {
           runId: runId || undefined
         });
       }
+      } // end for automation loop
+    }; // end runLoop
+
+    if (isManualTest) {
+      // @ts-ignore — EdgeRuntime is available in Supabase Edge Runtime
+      EdgeRuntime.waitUntil(
+        runLoop().catch((e) => console.error('[process-automations] background run failed:', e))
+      );
+      return new Response(JSON.stringify({
+        success: true,
+        accepted: true,
+        message: 'Automação iniciada em background. Acompanhe pelo histórico de execuções.',
+        automationId,
+      }), {
+        status: 202,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
+
+    await runLoop();
 
     const triggered = results.filter(r => r.triggered).length;
     console.log(`Processing complete. Triggered: ${triggered}/${results.length}`);
