@@ -85,6 +85,10 @@ function buildInitialProfile(client: Client): ViralProfile {
 }
 
 export const ViralSequenceTab = ({ clientId, client }: ViralSequenceTabProps) => {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const carouselIdParam = searchParams.get("carouselId");
+
   const [carousel, setCarousel] = useState<ViralCarousel>(() => {
     const saved = loadCurrentCarousel();
     // Só reusa rascunho salvo se for do mesmo cliente
@@ -95,7 +99,10 @@ export const ViralSequenceTab = ({ clientId, client }: ViralSequenceTabProps) =>
   const [tone, setTone] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isSendingToPlanning, setIsSendingToPlanning] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [sidebarRefreshKey, setSidebarRefreshKey] = useState(0);
 
   // Mapa de refs dos nós TwitterSlide (pra export PNG/PDF via html-to-image).
   const slideNodesRef = useRef<Map<string, HTMLElement>>(new Map());
@@ -108,6 +115,28 @@ export const ViralSequenceTab = ({ clientId, client }: ViralSequenceTabProps) =>
   const hasAnySlideFilled = carousel.slides.some(
     (s) => (s.heading?.trim() ?? "") !== "" || s.body.trim() !== "",
   );
+
+  // Carrega carrossel do Supabase se houver ?carouselId= na URL
+  useEffect(() => {
+    if (!carouselIdParam) return;
+    if (carousel.id === carouselIdParam) return; // já carregado
+    let canceled = false;
+    loadCarousel(carouselIdParam)
+      .then((c) => {
+        if (canceled || !c) return;
+        setCarousel(c);
+        setBriefing(c.briefing ?? "");
+        toast.success(`Carrossel "${c.title}" carregado`);
+      })
+      .catch((err) => {
+        console.error("[ViralSequence] loadCarousel failed:", err);
+        toast.error("Falha ao carregar carrossel");
+      });
+    return () => {
+      canceled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [carouselIdParam]);
 
   // Autosave (debounced pela natureza de useEffect a cada render)
   useEffect(() => {
@@ -135,9 +164,9 @@ export const ViralSequenceTab = ({ clientId, client }: ViralSequenceTabProps) =>
     return () => window.removeEventListener("keydown", onKey);
   }, [hasAnySlideFilled]);
 
-  // Se trocar cliente no meio do caminho, reseta
+  // Se trocar cliente no meio do caminho, reseta (mas só se não houver carouselId param ativo)
   useEffect(() => {
-    if (carousel.clientId !== clientId) {
+    if (carousel.clientId !== clientId && !carouselIdParam) {
       setCarousel(emptyCarousel(clientId, buildInitialProfile(client)));
       setBriefing("");
     }
@@ -178,7 +207,152 @@ export const ViralSequenceTab = ({ clientId, client }: ViralSequenceTabProps) =>
     setCarousel(emptyCarousel(clientId, buildInitialProfile(client)));
     setBriefing("");
     setTone("");
+    // Limpa carouselId da URL
+    setSearchParams((sp) => {
+      const next = new URLSearchParams(sp);
+      next.delete("carouselId");
+      return next;
+    });
     toast.success("Rascunho descartado.");
+  };
+
+  const handleSelectSaved = (id: string) => {
+    setSearchParams((sp) => {
+      const next = new URLSearchParams(sp);
+      next.set("carouselId", id);
+      return next;
+    });
+  };
+
+  const handleNewFromSidebar = () => {
+    clearCurrentCarousel();
+    setCarousel(emptyCarousel(clientId, buildInitialProfile(client)));
+    setBriefing("");
+    setTone("");
+    setSearchParams((sp) => {
+      const next = new URLSearchParams(sp);
+      next.delete("carouselId");
+      return next;
+    });
+  };
+
+  // Resolve workspaceId/userId pra salvar
+  const getSaveContext = async (): Promise<{ workspaceId: string; userId: string } | null> => {
+    const { data: userData } = await supabase.auth.getUser();
+    const userId = userData?.user?.id;
+    if (!userId) {
+      toast.error("Faça login pra salvar");
+      return null;
+    }
+    const { data: clientRow } = await supabase
+      .from("clients")
+      .select("workspace_id")
+      .eq("id", clientId)
+      .single();
+    if (!clientRow?.workspace_id) {
+      toast.error("Workspace do cliente não encontrado");
+      return null;
+    }
+    return { workspaceId: clientRow.workspace_id as string, userId };
+  };
+
+  const handleSave = async () => {
+    if (!hasAnySlideFilled) {
+      toast.error("Gere ou edite slides antes de salvar.");
+      return;
+    }
+    setIsSaving(true);
+    try {
+      const ctx = await getSaveContext();
+      if (!ctx) return;
+      const saved = await saveCarousel(carousel, ctx);
+      setCarousel(saved);
+      setSidebarRefreshKey((k) => k + 1);
+      // Sincroniza URL com o id salvo
+      setSearchParams((sp) => {
+        const next = new URLSearchParams(sp);
+        next.set("carouselId", saved.id);
+        return next;
+      });
+      toast.success("Carrossel salvo");
+    } catch (err) {
+      console.error("[ViralSequence] save failed:", err);
+      toast.error(`Falha ao salvar: ${(err as Error).message}`);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleSendToPlanning = async () => {
+    if (!hasAnySlideFilled) {
+      toast.error("Gere os slides antes de mandar pro planejamento.");
+      return;
+    }
+    setIsSendingToPlanning(true);
+    try {
+      const ctx = await getSaveContext();
+      if (!ctx) return;
+      // 1) Salva/atualiza carrossel pra ter id estável
+      const saved = await saveCarousel(carousel, ctx);
+
+      // 2) Resolve coluna "Rascunho" do workspace
+      const { data: cols } = await supabase
+        .from("kanban_columns")
+        .select("id")
+        .eq("workspace_id", ctx.workspaceId)
+        .in("column_type", ["draft", "idea"])
+        .order("position", { ascending: true })
+        .limit(1);
+      const columnId = cols?.[0]?.id ?? null;
+
+      // 3) Cria planning_item linkado
+      const { data: pi, error: piErr } = await supabase
+        .from("planning_items")
+        .insert({
+          workspace_id: ctx.workspaceId,
+          client_id: clientId,
+          column_id: columnId,
+          title: saved.title,
+          content: saved.slides
+            .map((s, i) => `=== Slide ${i + 1} ===\n${s.body}`)
+            .join("\n\n"),
+          platform: "instagram",
+          content_type: "viral_carousel",
+          status: "draft",
+          created_by: ctx.userId,
+          metadata: {
+            source: "kai:viral_sequence:manual",
+            content_type: "viral_carousel",
+            viral_carousel_id: saved.id,
+            viral_carousel_briefing: saved.briefing ?? null,
+            viral_carousel_slides: saved.slides,
+          },
+        })
+        .select("id")
+        .single();
+      if (piErr) throw piErr;
+
+      // 4) Linka de volta no carousel
+      await supabase
+        .from("viral_carousels")
+        .update({ planning_item_id: pi.id })
+        .eq("id", saved.id);
+
+      setCarousel(saved);
+      setSidebarRefreshKey((k) => k + 1);
+      toast.success("Mandado pro Planejamento", {
+        action: {
+          label: "Abrir",
+          onClick: () =>
+            navigate(`/kaleidos?client=${clientId}&tab=planning&item=${pi.id}`),
+        },
+      });
+    } catch (err) {
+      console.error("[ViralSequence] sendToPlanning failed:", err);
+      toast.error(`Falha: ${(err as Error).message}`);
+    } finally {
+      setIsSendingToPlanning(false);
+    }
   };
 
   const handleExportJson = () => {
