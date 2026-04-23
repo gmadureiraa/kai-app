@@ -427,7 +427,15 @@ export const ViralSequenceTab = ({ clientId, client }: ViralSequenceTabProps) =>
   ).length;
 
   return (
-    <div className="flex flex-col h-full overflow-hidden">
+    <div className="flex h-full overflow-hidden">
+      <SavedCarouselsSidebar
+        clientId={clientId}
+        currentId={carousel.id}
+        onSelect={handleSelectSaved}
+        onNew={handleNewFromSidebar}
+        refreshKey={sidebarRefreshKey}
+      />
+      <div className="flex-1 flex flex-col h-full overflow-hidden">
       {/* Header — sticky, com gradiente sutil */}
       <div className="border-b border-border/30 bg-gradient-to-b from-sky-50/30 to-background dark:from-sky-950/20 backdrop-blur-sm px-6 py-4 shrink-0">
         <div className="flex items-center gap-3">
