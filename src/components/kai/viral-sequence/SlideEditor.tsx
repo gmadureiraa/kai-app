@@ -258,6 +258,29 @@ export function SlideEditor({ slide, totalSlides, profile, onChange, onSlideNode
             }}
           />
         </div>
+
+        {/* Toggle: imagem como capa (só aparece se houver imagem) */}
+        {slide.image.kind !== "none" && (
+          <button
+            type="button"
+            onClick={() => onChange({ ...slide, imageAsCover: !slide.imageAsCover })}
+            className={cn(
+              "w-full flex items-center justify-between gap-2 px-2 py-1.5 rounded-md border text-[11px] transition-colors",
+              slide.imageAsCover
+                ? "border-sky-500 bg-sky-500/10 text-sky-700 dark:text-sky-300"
+                : "border-border/40 bg-muted/30 text-muted-foreground hover:bg-muted/60",
+            )}
+            title="Quando ativo, a imagem cobre todo o slide com o texto sobreposto."
+          >
+            <span className="flex items-center gap-1.5">
+              <Maximize2 className="h-3 w-3" />
+              Imagem como capa
+            </span>
+            <span className="font-mono text-[10px]">
+              {slide.imageAsCover ? "ON" : "OFF"}
+            </span>
+          </button>
+        )}
       </div>
 
       {/* Dialog: buscar imagem (galeria) */}
