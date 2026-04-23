@@ -687,6 +687,14 @@ export const ViralSequenceTab = ({ clientId, client }: ViralSequenceTabProps) =>
         </div>
       </div>
 
+      {/* Off-screen renderer scale=1 — usado pra captura PNG/PDF/ZIP em qualidade Instagram */}
+      {hasAnySlideFilled && (
+        <OffscreenSlideRenderer
+          carousel={carousel}
+          registerRef={registerExportNode}
+        />
+      )}
+
       {/* Full-screen preview modal */}
       <CarouselFullPreview
         carousel={carousel}
