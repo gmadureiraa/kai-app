@@ -665,6 +665,7 @@ export const ViralSequenceTab = ({ clientId, client }: ViralSequenceTabProps) =>
         open={previewOpen}
         onOpenChange={setPreviewOpen}
       />
+      </div>
     </div>
   );
 };
