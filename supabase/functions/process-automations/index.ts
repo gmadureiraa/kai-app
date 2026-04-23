@@ -1090,7 +1090,11 @@ serve(async (req) => {
         // ============================================================
         if (automation.content_type === 'viral_carousel' && automation.client_id) {
           try {
-            const briefing = (automation.prompt_template ?? triggerData?.title ?? automation.name).slice(0, 4000);
+            // Substitui variáveis ({{title}}, {{description}}, {{link}}, {{content}}, etc.)
+            // do prompt_template usando dados do trigger (RSS, etc.) — assim o briefing
+            // do carrossel já vem rico em contexto da notícia/evento.
+            const rawTemplate = automation.prompt_template ?? triggerData?.title ?? automation.name;
+            const briefing = (await replaceTemplateVariables(rawTemplate, triggerData ?? null, automation.name)).slice(0, 4000);
             const carouselTitle = triggerData?.title || automation.name;
 
             const vcRes = await fetch(`${supabaseUrl}/functions/v1/generate-viral-carousel`, {
