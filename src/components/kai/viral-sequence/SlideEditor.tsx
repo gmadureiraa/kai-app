@@ -177,6 +177,7 @@ export function SlideEditor({ slide, totalSlides, profile, onChange, onSlideNode
             ref={(n: HTMLDivElement | null) => onSlideNode?.(slide.id, n)}
             body={slide.body || "Texto do slide..."}
             imageUrl={currentImageUrl}
+            imageAsCover={slide.imageAsCover === true && slide.image.kind !== "none"}
             slideNumber={slide.order}
             totalSlides={totalSlides}
             profile={profile}
