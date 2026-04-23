@@ -509,17 +509,32 @@ export const ViralSequenceTab = ({ clientId, client }: ViralSequenceTabProps) =>
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
-                <Button variant="outline" size="sm" onClick={handleSaveStub} className="gap-1.5 h-8">
-                  <Save className="h-3.5 w-3.5" />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleSave}
+                  disabled={isSaving}
+                  className="gap-1.5 h-8"
+                >
+                  {isSaving ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Save className="h-3.5 w-3.5" />
+                  )}
                   Salvar
                 </Button>
                 <Button
                   size="sm"
-                  onClick={handlePublishStub}
+                  onClick={handleSendToPlanning}
+                  disabled={isSendingToPlanning}
                   className="gap-1.5 h-8 bg-sky-600 hover:bg-sky-700 text-white shadow-sm shadow-sky-600/30"
                 >
-                  <Send className="h-3.5 w-3.5" />
-                  Publicar
+                  {isSendingToPlanning ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <ListTodo className="h-3.5 w-3.5" />
+                  )}
+                  Mandar pro Planejamento
                 </Button>
               </>
             )}
