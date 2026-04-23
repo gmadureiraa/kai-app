@@ -219,6 +219,8 @@ serve(async (req) => {
       title,
       source = "manual",
       automationId,
+      coverImageUrl,
+      coverImageAttribution,
     } = body;
 
     if (!clientId || !briefing) {
@@ -295,6 +297,20 @@ serve(async (req) => {
       );
     }
     const slides = normalizeSlides(arr, slideCount);
+
+    // Aplica imagem de capa no slide 1 (se fornecida) — estilo capa de jornal.
+    if (coverImageUrl && slides.length > 0) {
+      slides[0] = {
+        ...slides[0],
+        image: {
+          kind: "search",
+          query: title ?? briefing.slice(0, 60),
+          url: coverImageUrl,
+          attribution: coverImageAttribution ?? undefined,
+        },
+        imageAsCover: true,
+      };
+    }
 
     const finalProfile: ViralProfile = profile ?? {
       name: client.name as string,
