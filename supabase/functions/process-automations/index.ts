@@ -1004,7 +1004,7 @@ serve(async (req) => {
     // até terminar, retornando 202 imediatamente.
     // ========================================================
     const automationsList = (automations as PlanningAutomation[]) || [];
-    const results: { id: string; name: string; triggered: boolean; error?: string; runId?: string }[] = [];
+    const results: { id: string; name: string; triggered: boolean; error?: string; runId?: string; itemId?: string }[] = [];
 
     const runLoop = async () => {
       for (const automation of automationsList) {
@@ -1126,13 +1126,23 @@ serve(async (req) => {
 
             console.log(`[viral_carousel] created carousel=${vcJson.carouselId} planningItem=${vcJson.planningItemId}`);
 
-            // Update automation tracking
+            // Update automation tracking — INCLUI last_guid pra evitar disparos duplicados
+            // (esse era o bug: branch viral_carousel não atualizava last_guid e cada hour
+            // a automação re-disparava a mesma notícia).
+            const vcUpdateData: Record<string, unknown> = {
+              last_triggered_at: new Date().toISOString(),
+              items_created: (automation.items_created ?? 0) + 1,
+            };
+            if (automation.trigger_type === 'rss' && newGuid) {
+              vcUpdateData.trigger_config = {
+                ...automation.trigger_config,
+                last_guid: newGuid,
+                last_checked: new Date().toISOString(),
+              };
+            }
             await supabase
               .from('planning_automations')
-              .update({
-                last_triggered_at: new Date().toISOString(),
-                items_created: (automation.items_created ?? 0) + 1,
-              })
+              .update(vcUpdateData)
               .eq('id', automation.id);
 
             if (runId) {
