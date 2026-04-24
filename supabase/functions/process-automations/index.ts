@@ -82,6 +82,12 @@ function toRecord(value: unknown): JsonObject {
     : {};
 }
 
+function toRecordArray(value: unknown): JsonObject[] {
+  return Array.isArray(value)
+    ? value.filter((item): item is JsonObject => !!item && typeof item === 'object' && !Array.isArray(item))
+    : [];
+}
+
 interface PlanningAutomation {
   id: string;
   workspace_id: string;
@@ -2028,19 +2034,26 @@ serve(async (req) => {
               };
 
               // Add thread items if available
-              if (automation.content_type === 'thread' && itemMeta0.thread_tweets?.length > 0) {
-                publishBody.threadItems = itemMeta0.thread_tweets.map((t: any) => ({
-                  text: t.text,
-                  media_urls: t.media_urls || [],
+              const threadTweets = toRecordArray(itemMeta0.thread_tweets);
+              if (automation.content_type === 'thread' && threadTweets.length > 0) {
+                publishBody.threadItems = threadTweets.map((tweet) => ({
+                  text: typeof tweet.text === 'string' ? tweet.text : '',
+                  media_urls: Array.isArray(tweet.media_urls)
+                    ? tweet.media_urls.filter((url): url is string => typeof url === 'string')
+                    : [],
                 }));
               }
 
               // Add carousel media if available
-              if (automation.content_type === 'carousel' && itemMeta0.carousel_slides?.length > 0) {
+              const carouselSlides = toRecordArray(itemMeta0.carousel_slides);
+              if (automation.content_type === 'carousel' && carouselSlides.length > 0) {
                 const carouselMedia: { url: string; type: string }[] = [];
-                for (const slide of itemMeta0.carousel_slides) {
-                  if (slide.media_urls?.length > 0) {
-                    for (const url of slide.media_urls) {
+                for (const slide of carouselSlides) {
+                  const slideMediaUrls = Array.isArray(slide.media_urls)
+                    ? slide.media_urls.filter((url): url is string => typeof url === 'string')
+                    : [];
+                  if (slideMediaUrls.length > 0) {
+                    for (const url of slideMediaUrls) {
                       carouselMedia.push({ url, type: url.match(/\.(mp4|mov|webm)$/i) ? 'video' : 'image' });
                     }
                   }
