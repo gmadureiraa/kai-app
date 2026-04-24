@@ -214,8 +214,8 @@ function normalizeSlides(raw: unknown[], target: number): ViralSlide[] {
 }
 
 /**
- * Chama kai-content-agent (non-streaming).
- * Se internalCall=true usa service role; senão repassa o JWT do usuário.
+ * Chama kai-content-agent (non-streaming) com retry exponencial em 5xx/timeout.
+ * Tentativas: 0s, 2s, 5s. Timeout por tentativa: 90s. Total worst-case ~4.5min.
  */
 async function callContentAgent(
   supabaseUrl: string,
@@ -224,29 +224,67 @@ async function callContentAgent(
   clientId: string,
   prompt: string,
 ): Promise<string> {
-  const res = await fetch(`${supabaseUrl}/functions/v1/kai-content-agent`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: authHeader,
-      apikey: apiKey,
-    },
-    body: JSON.stringify({
-      clientId,
-      request: prompt,
-      format: "twitter",
-      platform: "twitter",
-      stream: false,
-    }),
-  });
-  if (!res.ok) {
-    const errText = await res.text().catch(() => "");
-    throw new Error(`kai-content-agent ${res.status}: ${errText.slice(0, 300)}`);
+  const RETRIES = [0, 2000, 5000];
+  let lastErr: Error | null = null;
+
+  for (let attempt = 0; attempt < RETRIES.length; attempt++) {
+    if (RETRIES[attempt] > 0) {
+      console.log(`[generate-viral-carousel] retry ${attempt} in ${RETRIES[attempt]}ms`);
+      await new Promise((r) => setTimeout(r, RETRIES[attempt]));
+    }
+
+    try {
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 90_000);
+      const res = await fetch(`${supabaseUrl}/functions/v1/kai-content-agent`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: authHeader,
+          apikey: apiKey,
+        },
+        body: JSON.stringify({
+          clientId,
+          request: prompt,
+          format: "twitter",
+          platform: "twitter",
+          stream: false,
+        }),
+        signal: ctrl.signal,
+      });
+      clearTimeout(timer);
+
+      if (!res.ok) {
+        const errText = await res.text().catch(() => "");
+        // 5xx → retry; 4xx → fail fast
+        if (res.status >= 500 && attempt < RETRIES.length - 1) {
+          lastErr = new Error(`kai-content-agent ${res.status}: ${errText.slice(0, 200)}`);
+          console.warn(`[generate-viral-carousel] attempt ${attempt + 1} failed: ${lastErr.message}`);
+          continue;
+        }
+        throw new Error(`kai-content-agent ${res.status}: ${errText.slice(0, 300)}`);
+      }
+
+      const json = await res.json().catch(() => ({}));
+      const content = typeof json?.content === "string" ? json.content : "";
+      if (!content) {
+        if (attempt < RETRIES.length - 1) {
+          lastErr = new Error("kai-content-agent retornou conteúdo vazio");
+          continue;
+        }
+        throw lastErr ?? new Error("kai-content-agent retornou conteúdo vazio");
+      }
+      return content;
+    } catch (err) {
+      lastErr = err instanceof Error ? err : new Error(String(err));
+      if (attempt < RETRIES.length - 1) {
+        console.warn(`[generate-viral-carousel] attempt ${attempt + 1} threw:`, lastErr.message);
+        continue;
+      }
+      throw lastErr;
+    }
   }
-  const json = await res.json().catch(() => ({}));
-  const content = typeof json?.content === "string" ? json.content : "";
-  if (!content) throw new Error("kai-content-agent retornou conteúdo vazio");
-  return content;
+  throw lastErr ?? new Error("kai-content-agent falhou em todas as tentativas");
 }
 
 async function resolveDraftColumnId(
