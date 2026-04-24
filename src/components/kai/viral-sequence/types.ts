@@ -15,6 +15,24 @@ export type ImageSource =
   | { kind: "search"; query: string; url: string; attribution?: string }
   | { kind: "upload"; url: string; filename?: string };
 
+/** Onde o texto sobreposto fica posicionado quando `imageAsCover=true`. */
+export type CoverTextPosition = "top" | "center" | "bottom";
+
+/** Tamanho relativo do texto sobreposto à capa. */
+export type CoverTextSize = "sm" | "md" | "lg" | "xl";
+
+/** Intensidade do overlay escuro/claro pra garantir contraste. */
+export type CoverOverlayStrength = "soft" | "medium" | "strong";
+
+export interface CoverTextStyle {
+  size?: CoverTextSize;        // default md
+  position?: CoverTextPosition; // default bottom
+  spacing?: number;             // line-height multiplier (default 1.2, 1.0–1.6)
+  overlay?: CoverOverlayStrength; // default medium
+  /** Cor do texto. "auto" calcula baseado no overlay. */
+  textColor?: "auto" | "white" | "black";
+}
+
 export interface ViralSlide {
   id: string;
   order: number;
@@ -36,6 +54,8 @@ export interface ViralSlide {
    * slide 1 quando há uma imagem forte da notícia.
    */
   imageAsCover?: boolean;
+  /** Estilização do texto sobreposto à capa (apenas quando imageAsCover=true). */
+  coverTextStyle?: CoverTextStyle;
 }
 
 export interface ViralProfile {
