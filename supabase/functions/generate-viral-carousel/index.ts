@@ -371,18 +371,30 @@ serve(async (req) => {
     }
     const slides = normalizeSlides(arr, slideCount);
 
-    // Aplica imagem de capa no slide 1 (se fornecida) — estilo capa de jornal.
-    if (coverImageUrl && slides.length > 0) {
-      slides[0] = {
-        ...slides[0],
-        image: {
-          kind: "search",
-          query: title ?? briefing.slice(0, 60),
-          url: coverImageUrl,
-          attribution: coverImageAttribution ?? undefined,
-        },
-        imageAsCover: true,
-      };
+    // Aplica imagem de capa no slide 1 — estilo capa de jornal.
+    // Se RSS trouxer URL: cacheia no Storage pra não quebrar quando expirar.
+    // Se não trouxer: gera fallback SVG (gradient).
+    if (slides.length > 0) {
+      if (coverImageUrl) {
+        const cachedUrl = await cacheCoverImage(supabase, coverImageUrl, clientId);
+        slides[0] = {
+          ...slides[0],
+          image: {
+            kind: "search",
+            query: title ?? briefing.slice(0, 60),
+            url: cachedUrl,
+            attribution: coverImageAttribution ?? undefined,
+          },
+          imageAsCover: true,
+        };
+      } else {
+        const fb = buildFallbackCover(title ?? briefing);
+        slides[0] = {
+          ...slides[0],
+          image: { kind: "fallback", url: fb.url, palette: fb.palette, seed: fb.seed },
+          imageAsCover: true,
+        };
+      }
     }
 
     const finalProfile: ViralProfile = profile ?? {
