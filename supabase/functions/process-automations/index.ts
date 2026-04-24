@@ -1004,7 +1004,7 @@ serve(async (req) => {
     // até terminar, retornando 202 imediatamente.
     // ========================================================
     const automationsList = (automations as PlanningAutomation[]) || [];
-    const results: { id: string; name: string; triggered: boolean; error?: string; runId?: string }[] = [];
+    const results: { id: string; name: string; triggered: boolean; error?: string; runId?: string; itemId?: string }[] = [];
 
     const runLoop = async () => {
       for (const automation of automationsList) {
