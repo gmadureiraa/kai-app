@@ -248,6 +248,21 @@ export function SlideEditor({ slide, totalSlides, profile, onChange, onSlideNode
             active={slide.image.kind === "upload"}
             onClick={() => fileInputRef.current?.click()}
           />
+          <ImageButton
+            label="Capa"
+            icon={<PaletteIcon className="h-3 w-3" />}
+            active={slide.image.kind === "fallback"}
+            onClick={() => {
+              const seed = slide.body.slice(0, 60) || `slide-${slide.order}`;
+              setImage(buildFallbackImageSource(seed));
+              onChange({
+                ...slide,
+                image: buildFallbackImageSource(seed),
+                imageAsCover: true,
+              });
+              toast.success("Capa gerada (gradient).");
+            }}
+          />
           {slide.image.kind !== "none" && (
             <Button
               size="sm"
@@ -272,27 +287,64 @@ export function SlideEditor({ slide, totalSlides, profile, onChange, onSlideNode
           />
         </div>
 
+        {/* Atribuição (só se houver) */}
+        {slide.image.kind === "search" && slide.image.attribution && (
+          <div className="text-[10px] text-muted-foreground flex items-center gap-1 truncate">
+            <ExternalLink className="h-2.5 w-2.5 shrink-0" />
+            <span className="truncate" title={slide.image.attribution}>
+              {slide.image.attribution}
+            </span>
+          </div>
+        )}
+        {slide.image.kind === "fallback" && (
+          <div className="text-[10px] text-muted-foreground">
+            Capa gerada · paleta {slide.image.palette}
+          </div>
+        )}
+
         {/* Toggle: imagem como capa (só aparece se houver imagem) */}
         {slide.image.kind !== "none" && (
-          <button
-            type="button"
-            onClick={() => onChange({ ...slide, imageAsCover: !slide.imageAsCover })}
-            className={cn(
-              "w-full flex items-center justify-between gap-2 px-2 py-1.5 rounded-md border text-[11px] transition-colors",
-              slide.imageAsCover
-                ? "border-sky-500 bg-sky-500/10 text-sky-700 dark:text-sky-300"
-                : "border-border/40 bg-muted/30 text-muted-foreground hover:bg-muted/60",
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => onChange({ ...slide, imageAsCover: !slide.imageAsCover })}
+              className={cn(
+                "flex-1 flex items-center justify-between gap-2 px-2 py-1.5 rounded-md border text-[11px] transition-colors",
+                slide.imageAsCover
+                  ? "border-sky-500 bg-sky-500/10 text-sky-700 dark:text-sky-300"
+                  : "border-border/40 bg-muted/30 text-muted-foreground hover:bg-muted/60",
+              )}
+              title="Quando ativo, a imagem cobre todo o slide com o texto sobreposto."
+            >
+              <span className="flex items-center gap-1.5">
+                <Maximize2 className="h-3 w-3" />
+                Imagem como capa
+              </span>
+              <span className="font-mono text-[10px]">
+                {slide.imageAsCover ? "ON" : "OFF"}
+              </span>
+            </button>
+            {slide.imageAsCover && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 px-2 text-[11px] gap-1"
+                onClick={() => setCoverPreviewOpen(true)}
+                title="Ver slide em tamanho real (1080×1350)"
+              >
+                <Eye className="h-3 w-3" />
+                Preview
+              </Button>
             )}
-            title="Quando ativo, a imagem cobre todo o slide com o texto sobreposto."
-          >
-            <span className="flex items-center gap-1.5">
-              <Maximize2 className="h-3 w-3" />
-              Imagem como capa
-            </span>
-            <span className="font-mono text-[10px]">
-              {slide.imageAsCover ? "ON" : "OFF"}
-            </span>
-          </button>
+          </div>
+        )}
+
+        {/* Painel de controles da capa */}
+        {slide.image.kind !== "none" && slide.imageAsCover && (
+          <CoverControls
+            value={slide.coverTextStyle}
+            onChange={(next) => onChange({ ...slide, coverTextStyle: next })}
+          />
         )}
       </div>
 
