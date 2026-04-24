@@ -1247,7 +1247,7 @@ serve(async (req) => {
         const position = (count || 0) + 1;
 
         // Prepare metadata with images and target platforms
-        const targetPlatforms: string[] = automation.platforms?.length > 0
+        const targetPlatforms: string[] = (automation.platforms && automation.platforms.length > 0)
           ? automation.platforms
           : (derivedPlatform ? [derivedPlatform] : []);
 
