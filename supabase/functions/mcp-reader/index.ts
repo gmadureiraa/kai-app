@@ -172,18 +172,18 @@ mcpServer.tool("get_metrics", {
 
     const queries: Promise<void>[] = [];
     if (p === "all" || p === "twitter") {
-      queries.push(sb.from("twitter_posts").select("*").eq("client_id", client_id).order("posted_at", { ascending: false }).limit(lim).then(r => { result.twitter = r.data; }));
+      queries.push(Promise.resolve(sb.from("twitter_posts").select("*").eq("client_id", client_id).order("posted_at", { ascending: false }).limit(lim).then((r: any) => { result.twitter = r.data; })));
     }
     if (p === "all" || p === "linkedin") {
-      queries.push(sb.from("linkedin_posts").select("*").eq("client_id", client_id).order("posted_at", { ascending: false }).limit(lim).then(r => { result.linkedin = r.data; }));
+      queries.push(Promise.resolve(sb.from("linkedin_posts").select("*").eq("client_id", client_id).order("posted_at", { ascending: false }).limit(lim).then((r: any) => { result.linkedin = r.data; })));
     }
     if (p === "all" || p === "instagram") {
-      queries.push(sb.from("instagram_posts").select("*").eq("client_id", client_id).order("posted_at", { ascending: false }).limit(lim).then(r => { result.instagram = r.data; }));
+      queries.push(Promise.resolve(sb.from("instagram_posts").select("*").eq("client_id", client_id).order("posted_at", { ascending: false }).limit(lim).then((r: any) => { result.instagram = r.data; })));
     }
     if (p === "all" || p === "youtube") {
-      queries.push(sb.from("youtube_videos").select("*").eq("client_id", client_id).order("published_at", { ascending: false }).limit(lim).then(r => { result.youtube = r.data; }));
+      queries.push(Promise.resolve(sb.from("youtube_videos").select("*").eq("client_id", client_id).order("published_at", { ascending: false }).limit(lim).then((r: any) => { result.youtube = r.data; })));
     }
-    queries.push(sb.from("platform_metrics").select("*").eq("client_id", client_id).order("metric_date", { ascending: false }).limit(lim).then(r => { result.platform_metrics = r.data; }));
+    queries.push(Promise.resolve(sb.from("platform_metrics").select("*").eq("client_id", client_id).order("metric_date", { ascending: false }).limit(lim).then((r: any) => { result.platform_metrics = r.data; })));
 
     await Promise.all(queries);
     return { content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }] };
