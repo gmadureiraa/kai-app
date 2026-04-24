@@ -1064,12 +1064,13 @@ serve(async (req) => {
               shouldTrigger = shouldTriggerSchedule(automation.trigger_config, automation.last_triggered_at);
               break;
               
-            case 'rss':
+            case 'rss': {
               const rssResult = await checkRSSTrigger(automation.trigger_config);
               shouldTrigger = rssResult.shouldTrigger;
               triggerData = rssResult.data || null;
               newGuid = rssResult.newGuid;
               break;
+            }
               
             case 'webhook':
               shouldTrigger = false;
@@ -1246,8 +1247,8 @@ serve(async (req) => {
         const position = (count || 0) + 1;
 
         // Prepare metadata with images and target platforms
-        const targetPlatforms: string[] = (automation as any).platforms?.length > 0
-          ? (automation as any).platforms
+        const targetPlatforms: string[] = automation.platforms?.length > 0
+          ? automation.platforms
           : (derivedPlatform ? [derivedPlatform] : []);
 
         const metadata: Record<string, unknown> = {
@@ -2340,7 +2341,7 @@ serve(async (req) => {
     }; // end runLoop
 
     if (isManualTest) {
-      // @ts-ignore — EdgeRuntime is available in Supabase Edge Runtime
+      // @ts-expect-error — EdgeRuntime is available in Supabase Edge Runtime
       EdgeRuntime.waitUntil(
         runLoop().catch((e) => console.error('[process-automations] background run failed:', e))
       );
