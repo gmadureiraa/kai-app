@@ -95,8 +95,10 @@ export const PlanningItemCard = memo(function PlanningItemCard({
   const contentType = metadata.content_type || (item as any).content_type;
   const contentTypeLabel = contentType ? getContentTypeLabel(contentType) : null;
   const viralCarouselId: string | undefined = metadata.viral_carousel_id;
-  const viralSlides: Array<{ body: string }> | undefined = metadata.viral_carousel_slides;
+  const viralSlides: Array<{ body: string; image?: { kind: string; url?: string }; editorial?: { headline?: string; kicker?: string; subtitle?: string } }> | undefined = metadata.viral_carousel_slides;
   const isViralCarousel = contentType === 'viral_carousel' || !!viralCarouselId;
+  const viralCoverImage = viralSlides?.[0]?.image && viralSlides[0].image.kind !== 'none' ? viralSlides[0].image.url : undefined;
+  const viralEditorial = viralSlides?.[0]?.editorial;
 
   const displayDate = item.scheduled_at || item.published_at || item.due_date;
   const isFailed = item.status === 'failed';
