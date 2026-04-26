@@ -14,7 +14,7 @@
 
 import { forwardRef, type CSSProperties } from "react";
 import type { ReactNode } from "react";
-import { CANVAS_H, CANVAS_W, type ViralProfile, type CoverTextStyle } from "./types";
+import { CANVAS_H, CANVAS_W, type ViralProfile, type CoverTextStyle, type ViralSlide } from "./types";
 
 const TWITTER_BLUE = "#1D9BF0";
 const BG = "#FFFFFF";
@@ -41,6 +41,12 @@ interface TwitterSlideProps {
   coverTextStyle?: CoverTextStyle;
   /** Atribuição da imagem (mostrada como pequeno crédito quando há fonte). */
   imageAttribution?: string;
+  /**
+   * Layout editorial (capa de jornal) — quando preenchido + imageAsCover,
+   * renderiza kicker + headline grande + subtitle + crédito sobreposto.
+   * Substitui o `body` no slide.
+   */
+  editorial?: ViralSlide["editorial"];
   /** Reescreve URL da imagem (ex: pra passar por proxy CORS). */
   rewriteImageUrl?: (url: string) => string;
   className?: string;
