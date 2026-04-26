@@ -188,6 +188,7 @@ export function SlideEditor({ slide, totalSlides, profile, onChange, onSlideNode
             imageUrl={currentImageUrl}
             imageAsCover={slide.imageAsCover === true && slide.image.kind !== "none"}
             coverTextStyle={slide.coverTextStyle}
+            editorial={slide.editorial}
             imageAttribution={
               slide.image.kind === "search" ? slide.image.attribution : undefined
             }
@@ -212,6 +213,14 @@ export function SlideEditor({ slide, totalSlides, profile, onChange, onSlideNode
             {slide.body.length}/280
           </span>
         </div>
+
+        {isCover && (
+          <EditorialFields
+            value={slide.editorial}
+            onChange={(next) => onChange({ ...slide, editorial: next })}
+            isCoverActive={!!slide.imageAsCover && slide.image.kind !== "none"}
+          />
+        )}
 
         <Textarea
           value={slide.body}
@@ -672,5 +681,76 @@ function ImageButton({
       {icon}
       {label}
     </Button>
+  );
+}
+
+function EditorialFields({
+  value,
+  onChange,
+  isCoverActive,
+}: {
+  value: ViralSlide["editorial"];
+  onChange: (next: ViralSlide["editorial"]) => void;
+  isCoverActive: boolean;
+}) {
+  const v = value ?? { headline: "", subtitle: "", credit: "", kicker: "" };
+  const set = (patch: Partial<NonNullable<ViralSlide["editorial"]>>) =>
+    onChange({ ...v, ...patch });
+  const hasContent = !!(v.headline?.trim() || v.subtitle?.trim() || v.credit?.trim() || v.kicker?.trim());
+
+  return (
+    <div className="rounded-md border border-amber-500/30 bg-amber-500/5 p-2.5 space-y-2">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-1.5 text-[11px] font-semibold text-amber-700 dark:text-amber-400">
+          <Flag className="h-3 w-3" />
+          Layout editorial (capa de jornal)
+        </div>
+        {hasContent && (
+          <button
+            type="button"
+            onClick={() => onChange(undefined)}
+            className="text-[10px] text-muted-foreground hover:text-destructive"
+            title="Remover layout editorial — usar o body padrão"
+          >
+            limpar
+          </button>
+        )}
+      </div>
+      {!isCoverActive && hasContent && (
+        <div className="text-[10px] text-amber-700/80 dark:text-amber-400/80">
+          Ative “Imagem como capa” abaixo para o layout editorial aparecer.
+        </div>
+      )}
+      <Input
+        value={v.kicker ?? ""}
+        onChange={(e) => set({ kicker: e.target.value })}
+        placeholder="EYEBROW (ex: MERCADO, TECNOLOGIA)"
+        maxLength={30}
+        className="h-7 text-[11px] tracking-widest uppercase"
+      />
+      <Textarea
+        value={v.headline ?? ""}
+        onChange={(e) => set({ headline: e.target.value })}
+        placeholder="Manchete principal — frase forte, máximo ~80 chars"
+        className="text-sm resize-none min-h-[60px] font-serif font-bold leading-tight"
+        rows={2}
+        maxLength={120}
+      />
+      <Textarea
+        value={v.subtitle ?? ""}
+        onChange={(e) => set({ subtitle: e.target.value })}
+        placeholder="Subtítulo / lead — contexto curto (até ~140 chars)"
+        className="text-xs resize-none min-h-[50px] leading-snug"
+        rows={2}
+        maxLength={200}
+      />
+      <Input
+        value={v.credit ?? ""}
+        onChange={(e) => set({ credit: e.target.value })}
+        placeholder="Crédito / fonte (ex: Reuters, @autor)"
+        maxLength={60}
+        className="h-7 text-[11px]"
+      />
+    </div>
   );
 }
