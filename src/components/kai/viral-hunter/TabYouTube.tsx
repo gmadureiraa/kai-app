@@ -83,7 +83,42 @@ export function TabYouTube({ clientId, onUseAsInspiration }: TabYouTubeProps) {
     toast.success("Enviado pro KAI — ele vai criar algo baseado nesse vídeo.");
   };
 
-  if (!hasKey) {
+  const handleSaveAsIdea = async (v: typeof videos[number]) => {
+    if (!workspace?.id) {
+      toast.error("Workspace não encontrado");
+      return;
+    }
+    setSavingIds((s) => new Set(s).add(v.id));
+    try {
+      await saveAsIdea({
+        clientId,
+        workspaceId: workspace.id,
+        title: v.title,
+        briefing: [
+          v.description?.slice(0, 400) ?? "",
+          "",
+          `Vídeo viral de "${v.channelTitle}" (${fmt(v.viewCount)} views).`,
+          "Ângulo sugerido: adaptar o hook desse vídeo pro formato preferido do cliente.",
+        ].join("\n"),
+        source: {
+          kind: "youtube",
+          url: v.url,
+          sourceName: v.channelTitle,
+          thumbnail: v.thumbnailUrl,
+          publishedAt: v.publishedAt,
+        },
+      });
+      toast.success("Salvo como ideia no Planejamento");
+    } catch (err) {
+      toast.error("Falha ao salvar: " + (err as Error).message);
+    } finally {
+      setSavingIds((s) => {
+        const next = new Set(s);
+        next.delete(v.id);
+        return next;
+      });
+    }
+  };
     return (
       <div className="flex flex-col items-center justify-center py-16 text-center max-w-lg mx-auto gap-3">
         <div className="p-4 rounded-full bg-amber-100 dark:bg-amber-900/20">
