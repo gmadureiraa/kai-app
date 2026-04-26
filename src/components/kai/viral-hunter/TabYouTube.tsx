@@ -47,6 +47,8 @@ interface TabYouTubeProps {
 
 export function TabYouTube({ clientId, onUseAsInspiration }: TabYouTubeProps) {
   const { config, save } = useViralHunterConfig(clientId);
+  const { workspace } = useWorkspaceContext();
+  const [savingIds, setSavingIds] = useState<Set<string>>(new Set());
   const [period, setPeriod] = useState<"7d" | "30d" | "90d" | "all">("30d");
 
   const publishedAfter = useMemo(() => {
