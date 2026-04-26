@@ -188,6 +188,7 @@ export function SlideEditor({ slide, totalSlides, profile, onChange, onSlideNode
             imageUrl={currentImageUrl}
             imageAsCover={slide.imageAsCover === true && slide.image.kind !== "none"}
             coverTextStyle={slide.coverTextStyle}
+            editorial={slide.editorial}
             imageAttribution={
               slide.image.kind === "search" ? slide.image.attribution : undefined
             }
