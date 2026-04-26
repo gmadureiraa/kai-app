@@ -214,6 +214,14 @@ export function SlideEditor({ slide, totalSlides, profile, onChange, onSlideNode
           </span>
         </div>
 
+        {isCover && (
+          <EditorialFields
+            value={slide.editorial}
+            onChange={(next) => onChange({ ...slide, editorial: next })}
+            isCoverActive={!!slide.imageAsCover && slide.image.kind !== "none"}
+          />
+        )}
+
         <Textarea
           value={slide.body}
           onChange={(e) => onChange({ ...slide, body: e.target.value })}
