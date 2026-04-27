@@ -288,12 +288,14 @@ export function CalendarView({
   onRetry,
   onMoveItem,
   canEdit = true,
+  isDeleting = false,
 }: CalendarViewProps) {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [draggedItem, setDraggedItem] = useState<PlanningItem | null>(null);
   const [dragOverDay, setDragOverDay] = useState<Date | null>(null);
   const [expandedDay, setExpandedDay] = useState<string | null>(null);
   const [itemToDelete, setItemToDelete] = useState<PlanningItem | null>(null);
+  const [localDeleting, setLocalDeleting] = useState(false);
 
   const days = useMemo(() => {
     const monthStart = startOfMonth(currentDate);
