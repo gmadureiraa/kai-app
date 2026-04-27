@@ -454,11 +454,41 @@ export const ViralSequenceTab = ({ clientId, client }: ViralSequenceTabProps) =>
     }
   };
 
-  const handlePublishStub = () => {
-    toast.info(
-      "Publicar/Agendar: em breve — vai chamar a integração LATE (já disponível no KAI em outras áreas) direto daqui.",
-      { duration: 4000 },
+  const [isPublishing, setIsPublishing] = useState(false);
+  const handlePublishStub = async () => {
+    if (!hasAnySlideFilled) {
+      toast.error("Gere os slides antes de publicar.");
+      return;
+    }
+    const caption = window.prompt(
+      "Caption do post no Instagram (até 2200 chars):",
+      carousel.briefing?.slice(0, 500) ?? carousel.title,
     );
+    if (!caption?.trim()) return;
+    setIsPublishing(true);
+    try {
+      const ctx = await getSaveContext();
+      if (!ctx) return;
+      const saved = await saveCarousel(carousel, ctx);
+      setCarousel(saved);
+      const { publishCarouselToInstagram } = await import("./viral-sequence/publishCarousel");
+      const res = await publishCarouselToInstagram(
+        saved,
+        exportNodesRef.current as unknown as Map<string, HTMLElement>,
+        { caption: caption.trim() },
+      );
+      if (!res.ok) {
+        toast.error(`Falha: ${res.error}`);
+      } else {
+        toast.success(`Publicado no Instagram com ${res.mediaUrls?.length ?? 0} slides!`);
+        setSidebarRefreshKey((k) => k + 1);
+      }
+    } catch (err) {
+      console.error("[ViralSequence] publish failed:", err);
+      toast.error(`Falha: ${(err as Error).message}`);
+    } finally {
+      setIsPublishing(false);
+    }
   };
 
   const handleSaveStub = () => {
