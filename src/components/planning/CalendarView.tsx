@@ -1,7 +1,17 @@
 import { useState, useMemo, useCallback } from 'react';
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, parseISO, isToday as isDateToday, differenceInDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { ChevronLeft, ChevronRight, Plus, Clock, AlertCircle, CheckCircle2, Bot, FileEdit, RefreshCw, Calendar as CalendarIcon, MoreHorizontal, Sparkles } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, Clock, AlertCircle, CheckCircle2, Bot, FileEdit, RefreshCw, Calendar as CalendarIcon, MoreHorizontal, Sparkles, Trash2 } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -90,6 +100,7 @@ function CalendarCard({
   item, 
   onEdit, 
   onRetry,
+  onDelete,
   canEdit = true,
   onDragStart,
   isDragging 
@@ -97,6 +108,7 @@ function CalendarCard({
   item: PlanningItem; 
   onEdit: () => void; 
   onRetry?: () => void;
+  onDelete?: () => void;
   canEdit?: boolean;
   onDragStart?: (e: React.DragEvent, item: PlanningItem) => void;
   isDragging?: boolean;
@@ -151,6 +163,17 @@ function CalendarCard({
               {item.status === 'published' && <CheckCircle2 className="h-3 w-3 shrink-0 text-green-500" />}
               {isAutoPublish && item.status === 'scheduled' && (
                 <Bot className="h-3 w-3 shrink-0 text-primary/60" />
+              )}
+              {canEdit && onDelete && (
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); onDelete(); }}
+                  className="shrink-0 opacity-0 group-hover/card:opacity-100 transition-opacity hover:scale-110 text-muted-foreground hover:text-red-500"
+                  title="Excluir card"
+                  aria-label="Excluir card"
+                >
+                  <Trash2 className="h-3 w-3" />
+                </button>
               )}
             </div>
           </div>
@@ -269,6 +292,7 @@ export function CalendarView({
   const [draggedItem, setDraggedItem] = useState<PlanningItem | null>(null);
   const [dragOverDay, setDragOverDay] = useState<Date | null>(null);
   const [expandedDay, setExpandedDay] = useState<string | null>(null);
+  const [itemToDelete, setItemToDelete] = useState<PlanningItem | null>(null);
 
   const days = useMemo(() => {
     const monthStart = startOfMonth(currentDate);
@@ -502,6 +526,7 @@ export function CalendarView({
                       item={item}
                       onEdit={() => onEditItem(item)}
                       onRetry={() => onRetry(item.id)}
+                      onDelete={() => setItemToDelete(item)}
                       canEdit={canEdit}
                       onDragStart={handleDragStart}
                       isDragging={draggedItem?.id === item.id}
@@ -531,6 +556,31 @@ export function CalendarView({
           })}
         </div>
       </div>
+
+      <AlertDialog open={!!itemToDelete} onOpenChange={(open) => !open && setItemToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir card?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir <strong>{itemToDelete?.title || 'este item'}</strong>? Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (itemToDelete) {
+                  onDeleteItem(itemToDelete.id);
+                  setItemToDelete(null);
+                }
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
