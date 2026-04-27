@@ -214,6 +214,16 @@ export function TabNews({ clientId, onUseAsInspiration }: TabNewsProps) {
                     </Button>
                     <Button
                       size="sm"
+                      variant="ghost"
+                      className="h-6 text-[11px] gap-1 px-2 text-sky-700 dark:text-sky-400 hover:bg-sky-50 dark:hover:bg-sky-950/30"
+                      onClick={() => handleGenerateCarousel(n)}
+                      title="Abrir Sequência Viral com briefing dessa notícia"
+                    >
+                      <Layers className="h-3 w-3" />
+                      Carrossel
+                    </Button>
+                    <Button
+                      size="sm"
                       className="h-6 text-[11px] gap-1 bg-orange-600 hover:bg-orange-700 text-white px-2"
                       onClick={() => handleUse(n)}
                     >
