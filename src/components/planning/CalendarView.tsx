@@ -523,19 +523,23 @@ export function CalendarView({
                   "space-y-0.5",
                   expandedDay === format(day, 'yyyy-MM-dd') ? "overflow-visible" : "overflow-hidden"
                 )}>
-                  {(expandedDay === format(day, 'yyyy-MM-dd') ? dayItems : dayItems.slice(0, 3)).map(item => (
-                    <CalendarCard
-                      key={item.id}
-                      item={item}
-                      onEdit={() => onEditItem(item)}
-                      onRetry={() => onRetry(item.id)}
-                      onDelete={() => setItemToDelete(item)}
-                      canEdit={canEdit}
-                      onDragStart={handleDragStart}
-                      isDragging={draggedItem?.id === item.id}
-                    />
-                  ))}
-                  
+                  {(expandedDay === format(day, 'yyyy-MM-dd') ? dayItems : dayItems.slice(0, 3)).map(item => {
+                    // Hide delete for already-published items that are tied to a real external post
+                    const isLockedFromDelete = item.status === 'published' && !!item.external_post_id;
+                    return (
+                      <CalendarCard
+                        key={item.id}
+                        item={item}
+                        onEdit={() => onEditItem(item)}
+                        onRetry={() => onRetry(item.id)}
+                        onDelete={canEdit && !isLockedFromDelete ? () => setItemToDelete(item) : undefined}
+                        canEdit={canEdit}
+                        onDragStart={handleDragStart}
+                        isDragging={draggedItem?.id === item.id}
+                      />
+                    );
+                  })}
+
                   {dayItems.length > 3 && expandedDay !== format(day, 'yyyy-MM-dd') && (
                     <button
                       onClick={(e) => { e.stopPropagation(); setExpandedDay(format(day, 'yyyy-MM-dd')); }}
