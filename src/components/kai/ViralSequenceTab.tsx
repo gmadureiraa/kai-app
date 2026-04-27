@@ -91,6 +91,7 @@ export const ViralSequenceTab = ({ clientId, client }: ViralSequenceTabProps) =>
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const carouselIdParam = searchParams.get("carouselId");
+  const seedBriefingParam = searchParams.get("seedBriefing");
 
   const [carousel, setCarousel] = useState<ViralCarousel>(() => {
     const saved = loadCurrentCarousel();
