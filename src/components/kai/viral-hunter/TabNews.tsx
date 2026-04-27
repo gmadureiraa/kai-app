@@ -39,6 +39,7 @@ interface TabNewsProps {
 export function TabNews({ clientId, onUseAsInspiration }: TabNewsProps) {
   const { config, save } = useViralHunterConfig(clientId);
   const { workspace } = useWorkspaceContext();
+  const navigate = useNavigate();
   const [savingIds, setSavingIds] = useState<Set<string>>(new Set());
   const query = config.keywords.join(" OR ");
   const { data: news = [], isLoading, isFetching, refetch, error } = useGoogleNews({
