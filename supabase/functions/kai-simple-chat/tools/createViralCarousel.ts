@@ -84,6 +84,10 @@ export const createViralCarouselTool: RegisteredTool<
       `[createViralCarousel] clientId=${ctx.clientId} briefing="${briefing.slice(0, 60)}..." addToPlanning=${addToPlanning}`,
     );
 
+    const slideCount = typeof args.slideCount === "number" && args.slideCount >= 1 && args.slideCount <= 10
+      ? Math.round(args.slideCount)
+      : undefined;
+
     try {
       const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
       const res = await fetch(
@@ -100,6 +104,7 @@ export const createViralCarouselTool: RegisteredTool<
             briefing,
             tone,
             title,
+            slideCount,
             persistAs: addToPlanning ? "both" : "carousel",
             source: "chat",
           }),
