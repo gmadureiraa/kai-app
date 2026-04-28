@@ -21,6 +21,7 @@ interface CreateViralCarouselArgs {
   tone?: string;
   addToPlanning?: boolean;
   title?: string;
+  slideCount?: number;
 }
 
 interface CreateViralCarouselData {
