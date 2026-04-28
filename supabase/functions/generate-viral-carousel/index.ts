@@ -54,44 +54,7 @@ interface ViralSlide {
   body: string;
   image:
     | { kind: "none" }
-    | { kind: "search"; query: string; url: string; attribution?: string }
-    | { kind: "fallback"; url: string; palette: string; seed: string };
-  imageAsCover?: boolean;
-  coverTextStyle?: Record<string, unknown>;
-}
-
-// Paletas para cover fallback (espelha src/components/kai/viral-sequence/coverFallback.ts).
-const FALLBACK_PALETTES: Array<{ name: string; colors: [string, string]; accent: string }> = [
-  { name: "Indigo", colors: ["#1e1b4b", "#4338ca"], accent: "#a78bfa" },
-  { name: "Rose", colors: ["#881337", "#e11d48"], accent: "#fbcfe8" },
-  { name: "Emerald", colors: ["#022c22", "#059669"], accent: "#a7f3d0" },
-  { name: "Amber", colors: ["#451a03", "#d97706"], accent: "#fde68a" },
-  { name: "Slate", colors: ["#0f172a", "#475569"], accent: "#cbd5e1" },
-  { name: "Sky", colors: ["#082f49", "#0284c7"], accent: "#bae6fd" },
-];
-
-function hashStr(s: string): number {
-  let h = 0;
-  for (let i = 0; i < s.length; i++) {
-    h = (h << 5) - h + s.charCodeAt(i);
-    h |= 0;
-  }
-  return Math.abs(h);
-}
-
-function buildFallbackCover(seedText: string): { url: string; palette: string; seed: string } {
-  const palette = FALLBACK_PALETTES[hashStr(seedText) % FALLBACK_PALETTES.length];
-  const seed = hashStr(seedText);
-  const c1x = (seed % 600) + 200;
-  const c1y = ((seed >> 4) % 600) + 200;
-  const c2x = ((seed >> 8) % 700) + 100;
-  const c2y = ((seed >> 12) % 700) + 400;
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1350" viewBox="0 0 1080 1350"><defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="${palette.colors[0]}"/><stop offset="100%" stop-color="${palette.colors[1]}"/></linearGradient><radialGradient id="glow" cx="50%" cy="40%" r="60%"><stop offset="0%" stop-color="${palette.accent}" stop-opacity="0.35"/><stop offset="100%" stop-color="${palette.accent}" stop-opacity="0"/></radialGradient></defs><rect width="1080" height="1350" fill="url(#bg)"/><circle cx="${c1x}" cy="${c1y}" r="280" fill="${palette.accent}" opacity="0.12"/><circle cx="${c2x}" cy="${c2y}" r="180" fill="${palette.accent}" opacity="0.08"/><rect width="1080" height="1350" fill="url(#glow)"/></svg>`;
-  return {
-    url: `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`,
-    palette: palette.name,
-    seed: seedText.slice(0, 60),
-  };
+    | { kind: "search"; query: string; url: string; attribution?: string };
 }
 
 /**
@@ -139,7 +102,7 @@ interface RequestBody {
   title?: string;
   source?: "manual" | "automation" | "chat";
   automationId?: string;
-  /** Se fornecido, vira capa do slide 1 com imageAsCover=true. */
+  /** Se fornecido, vira a imagem do slide 1 (renderizada abaixo do texto). */
   coverImageUrl?: string | null;
   coverImageAttribution?: string | null;
 }
@@ -409,30 +372,20 @@ serve(async (req) => {
     }
     const slides = normalizeSlides(arr, slideCount);
 
-    // Aplica imagem de capa no slide 1 — estilo capa de jornal.
-    // Se RSS trouxer URL: cacheia no Storage pra não quebrar quando expirar.
-    // Se não trouxer: gera fallback SVG (gradient).
-    if (slides.length > 0) {
-      if (coverImageUrl) {
-        const cachedUrl = await cacheCoverImage(supabase, coverImageUrl, clientId);
-        slides[0] = {
-          ...slides[0],
-          image: {
-            kind: "search",
-            query: title ?? briefing.slice(0, 60),
-            url: cachedUrl,
-            attribution: coverImageAttribution ?? undefined,
-          },
-          imageAsCover: true,
-        };
-      } else {
-        const fb = buildFallbackCover(title ?? briefing);
-        slides[0] = {
-          ...slides[0],
-          image: { kind: "fallback", url: fb.url, palette: fb.palette, seed: fb.seed },
-          imageAsCover: true,
-        };
-      }
+    // Aplica imagem ao slide 1 APENAS quando há imagem real (RSS/scrape).
+    // Padrão Madureira: imagem fica abaixo do texto (não como cover/overlay).
+    // Sem imagem real → slide text-only (não geramos mais SVG fallback indigo).
+    if (slides.length > 0 && coverImageUrl) {
+      const cachedUrl = await cacheCoverImage(supabase, coverImageUrl, clientId);
+      slides[0] = {
+        ...slides[0],
+        image: {
+          kind: "search",
+          query: title ?? briefing.slice(0, 60),
+          url: cachedUrl,
+          attribution: coverImageAttribution ?? undefined,
+        },
+      };
     }
 
     const finalProfile: ViralProfile = profile ?? {
