@@ -175,11 +175,21 @@ export function createKAIEmitter(
   controller: ReadableStreamDefaultController<Uint8Array>,
   encoder: TextEncoder = new TextEncoder(),
 ): KAIStreamEmitter {
+  let closed = false;
+  const safeEnqueue = (bytes: Uint8Array) => {
+    if (closed) return;
+    try {
+      controller.enqueue(bytes);
+    } catch (err) {
+      // Cliente desconectou — marca como fechado pra parar heartbeats.
+      closed = true;
+      console.warn("[kai-stream] enqueue falhou (cliente desconectou):", (err as Error).message);
+    }
+  };
+
   const send = (delta: KAIStreamDelta) => {
-    const chunk = {
-      choices: [{ delta, index: 0 }],
-    };
-    controller.enqueue(encoder.encode(`data: ${JSON.stringify(chunk)}\n\n`));
+    const chunk = { choices: [{ delta, index: 0 }] };
+    safeEnqueue(encoder.encode(`data: ${JSON.stringify(chunk)}\n\n`));
   };
 
   return {
@@ -199,7 +209,22 @@ export function createKAIEmitter(
       send({ error: message });
     },
     done() {
-      controller.enqueue(encoder.encode(`data: [DONE]\n\n`));
+      safeEnqueue(encoder.encode(`data: [DONE]\n\n`));
+      closed = true;
+    },
+    heartbeat() {
+      // Comentário SSE — invisível pro parser, mantém TCP/proxy abertos.
+      safeEnqueue(encoder.encode(`: keepalive ${Date.now()}\n\n`));
+    },
+    startHeartbeat(intervalMs = 10_000) {
+      const id = setInterval(() => {
+        if (closed) {
+          clearInterval(id);
+          return;
+        }
+        safeEnqueue(encoder.encode(`: keepalive ${Date.now()}\n\n`));
+      }, intervalMs);
+      return () => clearInterval(id);
     },
   };
 }
