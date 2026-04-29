@@ -148,6 +148,23 @@ export interface KAIStreamEmitter {
   actionCard(card: KAIActionCard): void;
   error(message: string): void;
   done(): void;
+  /**
+   * Envia um comentário SSE invisível (`: keepalive\n\n`) pra manter a
+   * conexão viva durante operações longas. Ignorado pelo parser do front
+   * (linhas iniciadas com `:` são comentários SSE).
+   */
+  heartbeat(): void;
+  /**
+   * Inicia heartbeats periódicos no background. Retorna função pra parar.
+   * Use durante tools longas (publishNow, generateImage, etc.) que ficam
+   * mais de 10s sem emitir nada e poderiam derrubar a conexão por timeout
+   * de proxy/browser.
+   *
+   * @example
+   *   const stop = emit.startHeartbeat(10_000);
+   *   try { await longRunningTool(); } finally { stop(); }
+   */
+  startHeartbeat(intervalMs?: number): () => void;
 }
 
 /**
