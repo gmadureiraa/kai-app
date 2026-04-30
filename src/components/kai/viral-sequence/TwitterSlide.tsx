@@ -307,25 +307,7 @@ export const TwitterSlide = forwardRef<HTMLDivElement, TwitterSlideProps>(
                     display: "block",
                   }}
                 />
-                {imageAttribution && (
-                  <div
-                    style={{
-                      position: "absolute",
-                      bottom: 12,
-                      right: 16,
-                      fontSize: 16,
-                      color: "rgba(255,255,255,0.85)",
-                      fontWeight: 500,
-                      letterSpacing: "0.02em",
-                      textShadow: "0 1px 4px rgba(0,0,0,0.6)",
-                      background: "rgba(0,0,0,0.35)",
-                      padding: "4px 10px",
-                      borderRadius: 999,
-                    }}
-                  >
-                    Foto: {imageAttribution}
-                  </div>
-                )}
+                {/* Atribuição removida — Pexels não exige crédito visível. */}
               </div>
             )}
           </div>

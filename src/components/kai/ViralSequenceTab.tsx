@@ -500,31 +500,99 @@ export const ViralSequenceTab = ({ clientId, client }: ViralSequenceTabProps) =>
   };
 
   const [isAutoImaging, setIsAutoImaging] = useState(false);
+
+  /**
+   * Gera 2-4 palavras-chave em inglês via Gemini Flash a partir do briefing
+   * + body de cada slide. Fallback: 6 primeiras palavras do body.
+   */
+  const buildSearchQueries = async (
+    slides: { id: string; body: string }[],
+  ): Promise<Map<string, string>> => {
+    const fallback = new Map<string, string>();
+    for (const s of slides) {
+      const raw = (s.body || carousel.briefing || carousel.title)
+        .replace(/\*\*/g, "")
+        .replace(/[#@]/g, "")
+        .trim();
+      fallback.set(s.id, raw.split(/\s+/).slice(0, 6).join(" ").slice(0, 80));
+    }
+
+    if (slides.length === 0) return fallback;
+
+    try {
+      const prompt = `Você é um curador de stock photos. Para cada slide abaixo, retorne 2-4 palavras-chave EM INGLÊS que descrevam visualmente o tema (objetos concretos, cenas, atmosferas — NÃO conceitos abstratos). O Pexels rende muito mais resultados em inglês com termos visuais.
+
+CONTEXTO GERAL: ${(carousel.briefing || carousel.title || "").slice(0, 300)}
+
+SLIDES:
+${slides.map((s, i) => `${i + 1}. [id=${s.id}] ${s.body.replace(/\*\*/g, "").slice(0, 200)}`).join("\n")}
+
+Responda APENAS com JSON no formato: {"queries": [{"id": "...", "q": "..."}]}. Nada mais.`;
+
+      const { data, error } = await supabase.functions.invoke("kai-chat-stream", {
+        body: {
+          messages: [{ role: "user", content: prompt }],
+          mode: "general",
+          stream: false,
+          model: "google/gemini-2.5-flash",
+        },
+      });
+      if (error || !data) return fallback;
+      const text: string = data?.content || data?.message || data?.text || "";
+      const match = text.match(/\{[\s\S]*\}/);
+      if (!match) return fallback;
+      const parsed = JSON.parse(match[0]) as { queries?: { id: string; q: string }[] };
+      const result = new Map(fallback);
+      for (const q of parsed.queries ?? []) {
+        if (q.id && q.q?.trim()) result.set(q.id, q.q.trim().slice(0, 80));
+      }
+      return result;
+    } catch (err) {
+      console.warn("[ViralSequence] keyword LLM failed, using fallback:", err);
+      return fallback;
+    }
+  };
+
   const handleAutoImages = async () => {
-    const targets = carousel.slides.filter((s) => s.image.kind === "none");
+    // Pula slides já com imagem, marcados como skip, e o CTA (último).
+    const targets = carousel.slides.filter(
+      (s) =>
+        s.image.kind === "none" &&
+        s.order !== carousel.slides.length, // skip CTA
+    );
     if (targets.length === 0) {
-      toast.info("Todos os slides já têm imagem.");
+      toast.info("Nenhum slide precisa de imagem (CTA pulado, marcados como 'Sem imagem' respeitados).");
       return;
     }
     setIsAutoImaging(true);
+
+    // URLs já em uso em outros slides — pra evitar duplicata.
+    const usedUrls = new Set<string>(
+      carousel.slides
+        .map((s) => (s.image.kind === "none" || s.image.kind === "skip" ? null : s.image.url))
+        .filter((u): u is string => !!u),
+    );
+
     let ok = 0;
     let failed = 0;
     try {
+      const queries = await buildSearchQueries(targets.map((s) => ({ id: s.id, body: s.body })));
+
       for (const slide of targets) {
-        // Query: extrai 4-6 palavras-chave do body (sem markdown nem stopwords curtas).
-        const raw = (slide.body || carousel.briefing || carousel.title)
-          .replace(/\*\*/g, "")
-          .replace(/[#@]/g, "")
-          .trim();
-        const query = raw.split(/\s+/).slice(0, 6).join(" ").slice(0, 80);
-        if (!query) continue;
+        const query = queries.get(slide.id) || "";
+        if (!query) {
+          failed += 1;
+          continue;
+        }
         try {
-          const res = await searchImages(query, { perPage: 1, source: "pexels" });
-          const item = res.items[0];
+          const res = await searchImages(query, { perPage: 3, source: "pexels" });
+          // Pega 1º que não seja duplicata.
+          const item = res.items.find((i) => !usedUrls.has(i.url)) ?? res.items[0];
           if (!item) {
             failed += 1;
             continue;
           }
+          usedUrls.add(item.url);
           setCarousel((c) => ({
             ...c,
             updatedAt: new Date().toISOString(),
@@ -578,12 +646,12 @@ export const ViralSequenceTab = ({ clientId, client }: ViralSequenceTabProps) =>
       <div className="flex-1 flex flex-col h-full overflow-hidden">
       {/* Header — sticky, com gradiente sutil */}
       <div className="border-b border-border/30 bg-gradient-to-b from-sky-50/30 to-background dark:from-sky-950/20 backdrop-blur-sm px-6 py-4 shrink-0">
-        <div className="flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-sky-500 text-white shadow-sm shadow-sky-500/30">
+        <div className="flex items-start gap-3 flex-wrap">
+          <div className="p-2 rounded-lg bg-sky-500 text-white shadow-sm shadow-sky-500/30 shrink-0">
             <Twitter className="h-5 w-5" />
           </div>
-          <div className="flex-1 min-w-0">
-            <h2 className="text-lg font-semibold flex items-center gap-2">
+          <div className="flex-1 min-w-[200px]">
+            <h2 className="text-lg font-semibold flex items-center gap-2 flex-wrap">
               Sequência Viral
               <span className="text-xs font-normal text-muted-foreground">·</span>
               <span className="text-xs font-normal text-muted-foreground truncate">
@@ -600,108 +668,110 @@ export const ViralSequenceTab = ({ clientId, client }: ViralSequenceTabProps) =>
               Carrossel estilo Twitter — KAI cria as copies, você escolhe a imagem de cada slide.
             </p>
           </div>
-          <div className="flex items-center gap-1.5 shrink-0">
-            {hasAnySlideFilled && (
-              <>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setPreviewOpen(true)}
-                  className="gap-1.5 h-8"
-                  title="Preview em tela cheia (atalho: P)"
-                >
-                  <Eye className="h-3.5 w-3.5" />
-                  Preview
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleAutoImages}
-                  disabled={isAutoImaging}
-                  className="gap-1.5 h-8 border-sky-300/60 dark:border-sky-700/40 text-sky-700 dark:text-sky-400 hover:bg-sky-50 dark:hover:bg-sky-950/40"
-                  title="Buscar imagem no Pexels para cada slide vazio"
-                >
-                  {isAutoImaging ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  ) : (
-                    <FileImage className="h-3.5 w-3.5" />
-                  )}
-                  Auto-imagens
-                </Button>
-                <Button variant="ghost" size="sm" onClick={handleReset} className="gap-1.5 h-8">
-                  <RotateCcw className="h-3.5 w-3.5" />
-                  Zerar
-                </Button>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="gap-1.5 h-8"
-                      disabled={isExporting}
-                    >
-                      {isExporting ? (
-                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                      ) : (
-                        <Download className="h-3.5 w-3.5" />
-                      )}
-                      Exportar
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-48">
-                    <DropdownMenuItem onClick={handleExportPngs} className="gap-2">
-                      <FileImage className="h-4 w-4" />
-                      <div>
-                        <div className="text-sm">PNGs</div>
-                        <div className="text-[10px] text-muted-foreground">Uma imagem por slide</div>
-                      </div>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={handleExportPdf} className="gap-2">
-                      <FileText className="h-4 w-4" />
-                      <div>
-                        <div className="text-sm">PDF</div>
-                        <div className="text-[10px] text-muted-foreground">Todos slides em um arquivo</div>
-                      </div>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={handleExportJson} className="gap-2">
-                      <Download className="h-4 w-4" />
-                      <div>
-                        <div className="text-sm">JSON</div>
-                        <div className="text-[10px] text-muted-foreground">Estrutura completa</div>
-                      </div>
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleSave}
-                  disabled={isSaving}
-                  className="gap-1.5 h-8"
-                >
-                  {isSaving ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  ) : (
-                    <Save className="h-3.5 w-3.5" />
-                  )}
-                  Salvar
-                </Button>
-                <Button
-                  size="sm"
-                  onClick={handleSendToPlanning}
-                  disabled={isSendingToPlanning}
-                  className="gap-1.5 h-8 bg-sky-600 hover:bg-sky-700 text-white shadow-sm shadow-sky-600/30"
-                >
-                  {isSendingToPlanning ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  ) : (
-                    <ListTodo className="h-3.5 w-3.5" />
-                  )}
-                  Mandar pro Planejamento
-                </Button>
-              </>
-            )}
-          </div>
+          {hasAnySlideFilled && (
+            <div className="flex items-center gap-1.5 flex-wrap shrink-0 ml-auto">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPreviewOpen(true)}
+                className="gap-1.5 h-8"
+                title="Preview em tela cheia (atalho: P)"
+              >
+                <Eye className="h-3.5 w-3.5" />
+                Preview
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleAutoImages}
+                disabled={isAutoImaging}
+                className="gap-1.5 h-8 border-sky-300/60 dark:border-sky-700/40 text-sky-700 dark:text-sky-400 hover:bg-sky-50 dark:hover:bg-sky-950/40"
+                title="Buscar imagem no Pexels para slides vazios (CTA pulado, 'Sem imagem' respeitado)"
+              >
+                {isAutoImaging ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <FileImage className="h-3.5 w-3.5" />
+                )}
+                Auto-imagens
+              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5 h-8"
+                    disabled={isExporting}
+                  >
+                    {isExporting ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Download className="h-3.5 w-3.5" />
+                    )}
+                    Exportar
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  <DropdownMenuItem onClick={handleExportPngs} className="gap-2">
+                    <FileImage className="h-4 w-4" />
+                    <div>
+                      <div className="text-sm">PNGs</div>
+                      <div className="text-[10px] text-muted-foreground">Uma imagem por slide</div>
+                    </div>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleExportPdf} className="gap-2">
+                    <FileText className="h-4 w-4" />
+                    <div>
+                      <div className="text-sm">PDF</div>
+                      <div className="text-[10px] text-muted-foreground">Todos slides em um arquivo</div>
+                    </div>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleExportJson} className="gap-2">
+                    <Download className="h-4 w-4" />
+                    <div>
+                      <div className="text-sm">JSON</div>
+                      <div className="text-[10px] text-muted-foreground">Estrutura completa</div>
+                    </div>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleReset} className="gap-2 text-destructive focus:text-destructive">
+                    <RotateCcw className="h-4 w-4" />
+                    <div>
+                      <div className="text-sm">Zerar carrossel</div>
+                      <div className="text-[10px] text-muted-foreground">Descarta tudo</div>
+                    </div>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleSave}
+                disabled={isSaving}
+                className="gap-1.5 h-8"
+              >
+                {isSaving ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Save className="h-3.5 w-3.5" />
+                )}
+                Salvar
+              </Button>
+              <Button
+                size="sm"
+                onClick={handleSendToPlanning}
+                disabled={isSendingToPlanning}
+                className="gap-1.5 h-8 bg-sky-600 hover:bg-sky-700 text-white shadow-sm shadow-sky-600/30"
+              >
+                {isSendingToPlanning ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <ListTodo className="h-3.5 w-3.5" />
+                )}
+                Mandar pro Planejamento
+              </Button>
+            </div>
+          )}
         </div>
       </div>
 
