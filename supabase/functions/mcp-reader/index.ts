@@ -669,6 +669,51 @@ mcpServer.tool("update_client", {
   },
 });
 
+mcpServer.tool("create_viral_carousel", {
+  description: "Create a Twitter-style viral carousel (Sequência Viral) for a client. By default persists BOTH the carousel and a draft planning_item linked to it, so it shows up in the planning board. Use this for 'carrossel viral', 'sequência viral', 'thread visual'. For a normal Instagram carousel, use generate_content with format='carousel' instead.",
+  inputSchema: {
+    type: "object" as const,
+    properties: {
+      client_id: { type: "string", description: "Client UUID" },
+      briefing: { type: "string", description: "Topic/angle for the carousel. Be specific — include hook + key points to cover. For news (slide_count=1), include headline + summary." },
+      tone: { type: "string", description: "Optional tone (direto, provocativo, técnico, didático). If omitted, uses brand tone." },
+      title: { type: "string", description: "Optional short title. Defaults to first 60 chars of briefing." },
+      slide_count: { type: "number", description: "Number of slides. 1 = single news post (with cover image), 8 = standard carousel (default). Range 1-10." },
+      persist_as: { type: "string", enum: ["planning", "carousel", "both", "none"], description: "Where to save. Default 'both' — creates a viral_carousel row AND a draft planning_item linked to it (recommended so it appears in the planning board)." },
+      cover_image_url: { type: "string", description: "Optional cover image URL applied to slide 1 (e.g. RSS news image)." },
+    },
+    required: ["client_id", "briefing"],
+  },
+  handler: async ({ client_id, briefing, tone, title, slide_count, persist_as, cover_image_url }: any) => {
+    try {
+      const resp = await fetch(`${SUPABASE_URL}/functions/v1/generate-viral-carousel`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+          "x-internal-call": "true",
+        },
+        body: JSON.stringify({
+          clientId: client_id,
+          briefing,
+          tone,
+          title,
+          slideCount: slide_count,
+          persistAs: persist_as ?? "both",
+          source: "chat",
+          coverImageUrl: cover_image_url,
+        }),
+      });
+      const text = await resp.text();
+      let parsed: any;
+      try { parsed = JSON.parse(text); } catch { parsed = text; }
+      return { content: [{ type: "text" as const, text: JSON.stringify({ status: resp.status, data: parsed }, null, 2) }] };
+    } catch (err: any) {
+      return { content: [{ type: "text" as const, text: `Error: ${err.message}` }] };
+    }
+  },
+});
+
 mcpServer.tool("list_clients", {
   description: "List all clients in a workspace",
   inputSchema: {
