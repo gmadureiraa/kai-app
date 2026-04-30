@@ -18,6 +18,12 @@ export type ImageSource =
   | { kind: "search"; query: string; url: string; attribution?: string; sourceUrl?: string }
   | { kind: "upload"; url: string; filename?: string };
 
+/** Retorna a URL da imagem, ou undefined se o slide não tem (none/skip). */
+export function getImageUrl(image: ImageSource): string | undefined {
+  if (image.kind === "none" || image.kind === "skip") return undefined;
+  return image.url;
+}
+
 export interface ViralSlide {
   id: string;
   order: number;
