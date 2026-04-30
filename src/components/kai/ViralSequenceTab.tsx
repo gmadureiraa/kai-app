@@ -66,6 +66,7 @@ import {
 import { CarouselFullPreview } from "./viral-sequence/CarouselFullPreview";
 import { SavedCarouselsSidebar } from "./viral-sequence/SavedCarouselsSidebar";
 import { OffscreenSlideRenderer } from "./viral-sequence/OffscreenSlideRenderer";
+import { searchImages } from "./viral-sequence/imageSearch";
 
 interface ViralSequenceTabProps {
   clientId: string;
