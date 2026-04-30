@@ -646,12 +646,12 @@ Responda APENAS com JSON no formato: {"queries": [{"id": "...", "q": "..."}]}. N
       <div className="flex-1 flex flex-col h-full overflow-hidden">
       {/* Header — sticky, com gradiente sutil */}
       <div className="border-b border-border/30 bg-gradient-to-b from-sky-50/30 to-background dark:from-sky-950/20 backdrop-blur-sm px-6 py-4 shrink-0">
-        <div className="flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-sky-500 text-white shadow-sm shadow-sky-500/30">
+        <div className="flex items-start gap-3 flex-wrap">
+          <div className="p-2 rounded-lg bg-sky-500 text-white shadow-sm shadow-sky-500/30 shrink-0">
             <Twitter className="h-5 w-5" />
           </div>
-          <div className="flex-1 min-w-0">
-            <h2 className="text-lg font-semibold flex items-center gap-2">
+          <div className="flex-1 min-w-[200px]">
+            <h2 className="text-lg font-semibold flex items-center gap-2 flex-wrap">
               Sequência Viral
               <span className="text-xs font-normal text-muted-foreground">·</span>
               <span className="text-xs font-normal text-muted-foreground truncate">
@@ -668,110 +668,111 @@ Responda APENAS com JSON no formato: {"queries": [{"id": "...", "q": "..."}]}. N
               Carrossel estilo Twitter — KAI cria as copies, você escolhe a imagem de cada slide.
             </p>
           </div>
-          <div className="flex items-center gap-1.5 shrink-0">
-            {hasAnySlideFilled && (
-              <>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setPreviewOpen(true)}
-                  className="gap-1.5 h-8"
-                  title="Preview em tela cheia (atalho: P)"
-                >
-                  <Eye className="h-3.5 w-3.5" />
-                  Preview
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleAutoImages}
-                  disabled={isAutoImaging}
-                  className="gap-1.5 h-8 border-sky-300/60 dark:border-sky-700/40 text-sky-700 dark:text-sky-400 hover:bg-sky-50 dark:hover:bg-sky-950/40"
-                  title="Buscar imagem no Pexels para cada slide vazio"
-                >
-                  {isAutoImaging ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  ) : (
-                    <FileImage className="h-3.5 w-3.5" />
-                  )}
-                  Auto-imagens
-                </Button>
-                <Button variant="ghost" size="sm" onClick={handleReset} className="gap-1.5 h-8">
-                  <RotateCcw className="h-3.5 w-3.5" />
-                  Zerar
-                </Button>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="gap-1.5 h-8"
-                      disabled={isExporting}
-                    >
-                      {isExporting ? (
-                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                      ) : (
-                        <Download className="h-3.5 w-3.5" />
-                      )}
-                      Exportar
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-48">
-                    <DropdownMenuItem onClick={handleExportPngs} className="gap-2">
-                      <FileImage className="h-4 w-4" />
-                      <div>
-                        <div className="text-sm">PNGs</div>
-                        <div className="text-[10px] text-muted-foreground">Uma imagem por slide</div>
-                      </div>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={handleExportPdf} className="gap-2">
-                      <FileText className="h-4 w-4" />
-                      <div>
-                        <div className="text-sm">PDF</div>
-                        <div className="text-[10px] text-muted-foreground">Todos slides em um arquivo</div>
-                      </div>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={handleExportJson} className="gap-2">
-                      <Download className="h-4 w-4" />
-                      <div>
-                        <div className="text-sm">JSON</div>
-                        <div className="text-[10px] text-muted-foreground">Estrutura completa</div>
-                      </div>
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleSave}
-                  disabled={isSaving}
-                  className="gap-1.5 h-8"
-                >
-                  {isSaving ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  ) : (
-                    <Save className="h-3.5 w-3.5" />
-                  )}
-                  Salvar
-                </Button>
-                <Button
-                  size="sm"
-                  onClick={handleSendToPlanning}
-                  disabled={isSendingToPlanning}
-                  className="gap-1.5 h-8 bg-sky-600 hover:bg-sky-700 text-white shadow-sm shadow-sky-600/30"
-                >
-                  {isSendingToPlanning ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  ) : (
-                    <ListTodo className="h-3.5 w-3.5" />
-                  )}
-                  Mandar pro Planejamento
-                </Button>
-              </>
-            )}
-          </div>
+          {hasAnySlideFilled && (
+            <div className="flex items-center gap-1.5 flex-wrap shrink-0 ml-auto">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPreviewOpen(true)}
+                className="gap-1.5 h-8"
+                title="Preview em tela cheia (atalho: P)"
+              >
+                <Eye className="h-3.5 w-3.5" />
+                Preview
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleAutoImages}
+                disabled={isAutoImaging}
+                className="gap-1.5 h-8 border-sky-300/60 dark:border-sky-700/40 text-sky-700 dark:text-sky-400 hover:bg-sky-50 dark:hover:bg-sky-950/40"
+                title="Buscar imagem no Pexels para slides vazios (CTA pulado, 'Sem imagem' respeitado)"
+              >
+                {isAutoImaging ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <FileImage className="h-3.5 w-3.5" />
+                )}
+                Auto-imagens
+              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5 h-8"
+                    disabled={isExporting}
+                  >
+                    {isExporting ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Download className="h-3.5 w-3.5" />
+                    )}
+                    Exportar
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  <DropdownMenuItem onClick={handleExportPngs} className="gap-2">
+                    <FileImage className="h-4 w-4" />
+                    <div>
+                      <div className="text-sm">PNGs</div>
+                      <div className="text-[10px] text-muted-foreground">Uma imagem por slide</div>
+                    </div>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleExportPdf} className="gap-2">
+                    <FileText className="h-4 w-4" />
+                    <div>
+                      <div className="text-sm">PDF</div>
+                      <div className="text-[10px] text-muted-foreground">Todos slides em um arquivo</div>
+                    </div>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleExportJson} className="gap-2">
+                    <Download className="h-4 w-4" />
+                    <div>
+                      <div className="text-sm">JSON</div>
+                      <div className="text-[10px] text-muted-foreground">Estrutura completa</div>
+                    </div>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleReset} className="gap-2 text-destructive focus:text-destructive">
+                    <RotateCcw className="h-4 w-4" />
+                    <div>
+                      <div className="text-sm">Zerar carrossel</div>
+                      <div className="text-[10px] text-muted-foreground">Descarta tudo</div>
+                    </div>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleSave}
+                disabled={isSaving}
+                className="gap-1.5 h-8"
+              >
+                {isSaving ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Save className="h-3.5 w-3.5" />
+                )}
+                Salvar
+              </Button>
+              <Button
+                size="sm"
+                onClick={handleSendToPlanning}
+                disabled={isSendingToPlanning}
+                className="gap-1.5 h-8 bg-sky-600 hover:bg-sky-700 text-white shadow-sm shadow-sky-600/30"
+              >
+                {isSendingToPlanning ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <ListTodo className="h-3.5 w-3.5" />
+                )}
+                Mandar pro Planejamento
+              </Button>
+            </div>
+          )}
         </div>
-      </div>
 
       <div className="flex-1 overflow-y-auto">
         <div className="px-6 py-6 space-y-6">
