@@ -13,6 +13,7 @@ export type ViralTemplateId = "twitter"; // MVP: só twitter
 
 export type ImageSource =
   | { kind: "none" }
+  | { kind: "skip" } // marcado explicitamente como "sem imagem" — auto-imagens ignora
   | { kind: "ai"; prompt: string; url: string }
   | { kind: "search"; query: string; url: string; attribution?: string; sourceUrl?: string }
   | { kind: "upload"; url: string; filename?: string };
