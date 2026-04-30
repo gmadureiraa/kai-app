@@ -40,18 +40,20 @@ import { cn } from "@/lib/utils";
 import type { ViralSlide, ViralProfile, ImageSource } from "./types";
 import { TwitterSlide } from "./TwitterSlide";
 import { searchImages, type ImageSearchResult } from "./imageSearch";
+import { supabase } from "@/integrations/supabase/client";
 
 interface SlideEditorProps {
   slide: ViralSlide;
   totalSlides: number;
   profile: ViralProfile;
+  clientId: string;
   onChange: (next: ViralSlide) => void;
   onRemove?: () => void;
   /** Callback que recebe o ref do nó do TwitterSlide — usado pra export PNG/PDF. */
   onSlideNode?: (slideId: string, node: HTMLElement | null) => void;
 }
 
-export function SlideEditor({ slide, totalSlides, profile, onChange, onSlideNode }: SlideEditorProps) {
+export function SlideEditor({ slide, totalSlides, profile, clientId, onChange, onSlideNode }: SlideEditorProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [searchDialogOpen, setSearchDialogOpen] = useState(false);
   const [aiDialogOpen, setAiDialogOpen] = useState(false);
