@@ -46,7 +46,7 @@ export function WebhookSettings() {
         .order("created_at", { ascending: false })
         .limit(15);
       if (error) throw error;
-      return data as Array<{
+      return (data ?? []) as unknown as Array<{
         id: string;
         event_type: string;
         processed_ok: boolean;
