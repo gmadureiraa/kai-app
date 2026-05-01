@@ -118,7 +118,7 @@ serve(async (req: Request) => {
     const {
       clientId,
       platform,
-      content,
+      content: rawContent,
       mediaUrls,
       mediaItems: inputMediaItems,
       threadItems,
@@ -128,17 +128,15 @@ serve(async (req: Request) => {
       platformOptions,
     }: PostRequest = await req.json();
 
-    // Resolve per-platform options (caption override applies before length validation/truncation)
+    // Resolve per-platform options + caption override
     const igOpts: InstagramOptions = platformOptions?.instagram || {};
     const fbOpts: FacebookOptions = platformOptions?.facebook || {};
-    let resolvedContent = content;
+    let content = rawContent;
     if (platform === 'instagram' && igOpts.customCaption?.trim()) {
-      resolvedContent = igOpts.customCaption;
+      content = igOpts.customCaption;
     } else if (platform === 'facebook' && fbOpts.customCaption?.trim()) {
-      resolvedContent = fbOpts.customCaption;
+      content = fbOpts.customCaption;
     }
-    // Overwrite the local "content" reference for the rest of the function
-    // (kept readable: assign back via a let-bound shadow below)
 
     // === INPUT VALIDATION ===
     
