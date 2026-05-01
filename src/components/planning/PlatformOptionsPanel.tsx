@@ -151,13 +151,53 @@ export function PlatformOptionsPanel({ selectedPlatforms, value, onChange, hasMu
               </div>
 
               <div className="space-y-1.5">
-                <Label className="text-[11px]">Capa do Reel (URL)</Label>
+                <Label className="text-[11px]">Capa do Reel (URL JPEG/PNG, 1080x1920)</Label>
                 <Input
                   value={ig.instagramThumbnail || ''}
-                  onChange={(e) => setIG({ instagramThumbnail: e.target.value })}
-                  placeholder="https://… (JPEG/PNG, 1080x1920)"
+                  onChange={(e) => setIG({ instagramThumbnail: e.target.value, thumbOffset: undefined })}
+                  placeholder="https://…"
                   className="h-8 text-xs"
                 />
+              </div>
+
+              {!ig.instagramThumbnail && (
+                <div className="space-y-1.5">
+                  <Label className="text-[11px]">…ou Thumb Offset (segundos do vídeo)</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    step={0.1}
+                    value={ig.thumbOffset ?? ''}
+                    onChange={(e) => setIG({ thumbOffset: e.target.value === '' ? undefined : Number(e.target.value) })}
+                    placeholder="Ex: 1.5"
+                    className="h-8 text-xs"
+                  />
+                </div>
+              )}
+
+              <div className="space-y-1.5">
+                <Label className="text-[11px]">Nome do áudio (Instagram Reels)</Label>
+                <Input
+                  value={ig.audioName || ''}
+                  onChange={(e) => setIG({ audioName: e.target.value })}
+                  placeholder="Ex: Madureira Original Sound"
+                  className="h-8 text-xs"
+                />
+              </div>
+
+              {/* Live preview do payload Zernio */}
+              <div className="rounded-md bg-muted/40 border border-border/40 p-2 space-y-1">
+                <div className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium">
+                  Prévia do envio (Zernio)
+                </div>
+                <pre className="text-[10px] leading-snug font-mono whitespace-pre-wrap text-foreground/80">
+{JSON.stringify(buildZernioPreview(ig), null, 2)}
+                </pre>
+                {ig.trialReel && ig.trialReel !== 'off' && (
+                  <p className="text-[10px] text-amber-600 dark:text-amber-400 leading-tight pt-1">
+                    🧪 Trial Reel ativo — só será exibido para não-seguidores.
+                  </p>
+                )}
               </div>
             </div>
           )}
