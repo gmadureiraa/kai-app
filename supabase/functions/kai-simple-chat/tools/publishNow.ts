@@ -122,7 +122,7 @@ export const publishNowTool: RegisteredTool<PublishNowArgs, PublishNowData> = {
       const { data: item, error: itemErr } = await ctx.supabase
         .from("planning_items")
         .select(
-          "id, client_id, platform, content, media_urls, status, scheduled_at",
+          "id, client_id, platform, content, media_urls, status, scheduled_at, metadata",
         )
         .eq("id", planningItemId)
         .eq("client_id", ctx.clientId)
