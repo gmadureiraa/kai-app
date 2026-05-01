@@ -777,6 +777,19 @@ mcpServer.tool("publish_content", {
       // Facebook-specific
       facebook_content_type: { type: "string", enum: ["feed", "story", "reel"], description: "Facebook only." },
       facebook_first_comment: { type: "string" },
+      // Thread-specific (X / Threads)
+      thread_items: {
+        type: "array",
+        description: "THREAD ONLY (platform=twitter or threads). Array of posts. Each is independent. Per-platform char limits: X=280, Threads=500. media_urls is per post.",
+        items: {
+          type: "object",
+          properties: {
+            text: { type: "string" },
+            media_urls: { type: "array", items: { type: "string" } },
+          },
+          required: ["text"],
+        },
+      },
     },
     required: ["client_id", "platform"],
   },
