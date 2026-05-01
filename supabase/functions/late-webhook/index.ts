@@ -445,6 +445,7 @@ serve(async (req: Request) => {
           `<b>Cliente:</b> ${escapeHtml(clientName)}\n` +
           `<b>Plataforma:</b> ${escapeHtml(platformLabel)}\n` +
           `<b>Título:</b> ${escapeHtml(item.title || "—")}`,
+        item.client_id,
       );
     }
 
