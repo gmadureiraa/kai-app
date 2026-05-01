@@ -23,6 +23,36 @@ interface MediaItem {
 const ALLOWED_PLATFORMS = ['twitter', 'linkedin', 'instagram', 'tiktok', 'youtube', 'facebook', 'threads'] as const;
 type AllowedPlatform = typeof ALLOWED_PLATFORMS[number];
 
+type IGContentType = 'feed' | 'story' | 'reel' | 'carousel';
+type FBContentType = 'feed' | 'story' | 'reel';
+type TrialReelMode = 'off' | 'manual' | 'auto';
+
+interface InstagramOptions {
+  contentType?: IGContentType;
+  shareToFeed?: boolean;
+  trialReel?: TrialReelMode;
+  collaborators?: string[];
+  userTags?: Array<{ username: string; x: number; y: number; mediaIndex?: number }>;
+  firstComment?: string;
+  instagramThumbnail?: string;
+  thumbOffset?: number;
+  audioName?: string;
+  customCaption?: string;
+}
+
+interface FacebookOptions {
+  contentType?: FBContentType;
+  firstComment?: string;
+  customCaption?: string;
+}
+
+interface PlatformOptions {
+  instagram?: InstagramOptions;
+  facebook?: FacebookOptions;
+  // future: linkedin, tiktok, youtube, threads, twitter
+  [key: string]: Record<string, unknown> | undefined;
+}
+
 interface PostRequest {
   clientId: string;
   platform: AllowedPlatform;
@@ -33,6 +63,7 @@ interface PostRequest {
   planningItemId?: string;
   scheduledFor?: string; // ISO date string for scheduling
   publishNow?: boolean;
+  platformOptions?: PlatformOptions;
 }
 
 // Input validation constants
