@@ -72,7 +72,6 @@ export const KaiPerformanceTab = ({ clientId, client }: KaiPerformanceTabProps) 
 
   return (
     <div className="space-y-4">
-      <AutoSyncStatus clientId={clientId} />
       {/* Channel Tabs */}
       <Tabs value={activeChannel} onValueChange={setActiveChannel}>
         <div className="flex items-center justify-between gap-4 -mx-3 sm:mx-0 px-3 sm:px-0">
@@ -86,16 +85,13 @@ export const KaiPerformanceTab = ({ clientId, client }: KaiPerformanceTabProps) 
               ))}
             </TabsList>
           </div>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={syncMetrics} 
-            disabled={isSyncing}
-            className="shrink-0"
-          >
-            <RefreshCw className={cn("h-4 w-4 mr-2", isSyncing && "animate-spin")} />
-            Sincronizar
-          </Button>
+          {syncPlatform && (
+            <PlatformSyncButton
+              platform={syncPlatform}
+              clientId={clientId}
+              className="shrink-0"
+            />
+          )}
         </div>
 
         <TabsContent value="instagram" className="mt-4">
