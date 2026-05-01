@@ -55,6 +55,22 @@ const FB_TYPES: { value: FBContentType; label: string; emoji: string }[] = [
   { value: 'reel', label: 'Reel', emoji: '🎬' },
 ];
 
+function buildZernioPreview(ig: InstagramOptions): Record<string, unknown> {
+  const data: Record<string, unknown> = { contentType: 'reels' };
+  data.shareToFeed = ig.shareToFeed !== false;
+  if (ig.trialReel && ig.trialReel !== 'off') {
+    data.trialParams = {
+      graduationStrategy: ig.trialReel === 'auto' ? 'SS_PERFORMANCE' : 'MANUAL',
+    };
+  }
+  if (ig.instagramThumbnail) data.instagramThumbnail = ig.instagramThumbnail;
+  else if (typeof ig.thumbOffset === 'number') data.thumbOffset = ig.thumbOffset;
+  if (ig.audioName) data.audioName = ig.audioName;
+  if (ig.collaborators?.length) data.collaborators = ig.collaborators.slice(0, 3);
+  if (ig.firstComment?.trim()) data.firstComment = ig.firstComment.trim();
+  return data;
+}
+
 export function PlatformOptionsPanel({ selectedPlatforms, value, onChange, hasMultipleMedia }: Props) {
   const showIG = selectedPlatforms.includes('instagram');
   const showFB = selectedPlatforms.includes('facebook');
