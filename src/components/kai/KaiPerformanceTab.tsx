@@ -40,7 +40,15 @@ export const KaiPerformanceTab = ({ clientId, client }: KaiPerformanceTabProps) 
   );
   
   const [activeChannel, setActiveChannel] = useState("instagram");
-  const { syncMetrics, isSyncing } = useSyncLateMetrics(clientId);
+
+  // Mapeia a aba ativa para a plataforma de sync (quando suportada).
+  const SYNC_PLATFORM_MAP: Record<string, SyncPlatform | undefined> = {
+    instagram: "instagram",
+    youtube: "youtube",
+    twitter: "twitter",
+    linkedin: "linkedin",
+  };
+  const syncPlatform = SYNC_PLATFORM_MAP[activeChannel];
   
   const { data: instagramMetrics, isLoading: isLoadingInstagram } = usePerformanceMetrics(clientId, "instagram", 365);
   const { data: instagramPosts, isLoading: isLoadingInstagramPosts } = useInstagramPosts(clientId, 500);
