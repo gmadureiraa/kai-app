@@ -813,6 +813,14 @@ export function PlanningItemDialog({
                 )}
               </div>
 
+              {/* Per-platform options (Stories, Reels, Trial Reels, etc.) */}
+              <PlatformOptionsPanel
+                selectedPlatforms={selectedPlatforms}
+                value={platformOptions}
+                onChange={setPlatformOptions}
+                hasMultipleMedia={mediaItems.length > 1}
+              />
+
               {/* Divider */}
               <div className="border-t border-border/30" />
 
