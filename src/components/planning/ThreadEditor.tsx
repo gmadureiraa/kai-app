@@ -176,7 +176,7 @@ export function ThreadEditor({
                   <Textarea
                     value={tweet.text}
                     onChange={(e) => updateTweet(tweet.id, e.target.value)}
-                    placeholder={index === 0 ? "Primeiro tweet da thread..." : "Continuar thread..."}
+                    placeholder={index === 0 ? "Primeiro post da thread..." : "Continuar thread..."}
                     className="resize-none min-h-[80px] pr-12 rounded-md border-border/40 text-sm"
                     maxLength={MAX_TWEET_LENGTH}
                   />
