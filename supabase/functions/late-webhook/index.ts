@@ -474,6 +474,7 @@ serve(async (req: Request) => {
       processed_ok: true,
       related_planning_item_id: item.id,
       related_client_id: item.client_id,
+      client_id: item.client_id,
     });
 
     return new Response(JSON.stringify({ success: true, eventType: event.type }), {
