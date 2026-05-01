@@ -156,6 +156,7 @@ export function PlanningItemDialog({
     time: null,
     endDate: null,
   });
+  const [platformOptions, setPlatformOptions] = useState<PlatformOptionsState>({});
 
   const { generateImage, isGenerating: isGeneratingImage } = usePlanningImageGeneration(selectedClientId);
   const { generateContent, isGenerating: isGeneratingContent, isFetchingReference } = usePlanningContentGeneration();
