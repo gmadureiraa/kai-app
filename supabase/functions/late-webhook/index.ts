@@ -371,6 +371,7 @@ serve(async (req: Request) => {
           `<b>Título:</b> ${escapeHtml(item.title || "—")}\n` +
           `<b>Erro:</b> <code>${escapeHtml(event.error || "Desconhecido")}</code>\n\n` +
           `Abra no kAI para revisar e republicar.`,
+        item.client_id,
       );
     }
 
