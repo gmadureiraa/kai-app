@@ -28,10 +28,17 @@ export function ThreadEditor({
   value,
   onChange,
   clientId,
-  className
+  className,
+  targetPlatforms = ['twitter']
 }: ThreadEditorProps) {
   const [uploadingFor, setUploadingFor] = useState<string | null>(null);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+
+  const hasX = targetPlatforms.includes('twitter');
+  const hasThreads = targetPlatforms.includes('threads');
+  // Se ambos, usar o menor limite (X) para garantir que cabe nos dois.
+  const MAX_TWEET_LENGTH = hasX ? X_MAX : (hasThreads ? THREADS_MAX : X_MAX);
+  const platformLabel = hasX && hasThreads ? 'X + Threads' : hasThreads ? 'Threads' : 'X (Twitter)';
 
   const addTweet = () => {
     const newTweet: ThreadTweet = {
