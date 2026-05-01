@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Eye, Instagram, Mail, Twitter, Megaphone, Linkedin, RefreshCw } from "lucide-react";
+import { Eye, Instagram, Mail, Twitter, Megaphone, Linkedin } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { usePerformanceMetrics } from "@/hooks/usePerformanceMetrics";
 import { useYouTubeVideos } from "@/hooks/useYouTubeMetrics";
@@ -14,10 +14,7 @@ import { LinkedInDashboard } from "@/components/performance/LinkedInDashboard";
 import { MetaAdsDashboard } from "@/components/performance/MetaAdsDashboard";
 import { Client } from "@/hooks/useClients";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Button } from "@/components/ui/button";
-import { useSyncLateMetrics } from "@/hooks/useSyncLateMetrics";
-import { AutoSyncStatus } from "@/components/performance/AutoSyncStatus";
-import { cn } from "@/lib/utils";
+import { PlatformSyncButton, type SyncPlatform } from "@/components/performance/PlatformSyncButton";
 
 interface KaiPerformanceTabProps {
   clientId: string;
@@ -43,7 +40,15 @@ export const KaiPerformanceTab = ({ clientId, client }: KaiPerformanceTabProps) 
   );
   
   const [activeChannel, setActiveChannel] = useState("instagram");
-  const { syncMetrics, isSyncing } = useSyncLateMetrics(clientId);
+
+  // Mapeia a aba ativa para a plataforma de sync (quando suportada).
+  const SYNC_PLATFORM_MAP: Record<string, SyncPlatform | undefined> = {
+    instagram: "instagram",
+    youtube: "youtube",
+    twitter: "twitter",
+    linkedin: "linkedin",
+  };
+  const syncPlatform = SYNC_PLATFORM_MAP[activeChannel];
   
   const { data: instagramMetrics, isLoading: isLoadingInstagram } = usePerformanceMetrics(clientId, "instagram", 365);
   const { data: instagramPosts, isLoading: isLoadingInstagramPosts } = useInstagramPosts(clientId, 500);
@@ -67,7 +72,6 @@ export const KaiPerformanceTab = ({ clientId, client }: KaiPerformanceTabProps) 
 
   return (
     <div className="space-y-4">
-      <AutoSyncStatus clientId={clientId} />
       {/* Channel Tabs */}
       <Tabs value={activeChannel} onValueChange={setActiveChannel}>
         <div className="flex items-center justify-between gap-4 -mx-3 sm:mx-0 px-3 sm:px-0">
@@ -81,16 +85,13 @@ export const KaiPerformanceTab = ({ clientId, client }: KaiPerformanceTabProps) 
               ))}
             </TabsList>
           </div>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={syncMetrics} 
-            disabled={isSyncing}
-            className="shrink-0"
-          >
-            <RefreshCw className={cn("h-4 w-4 mr-2", isSyncing && "animate-spin")} />
-            Sincronizar
-          </Button>
+          {syncPlatform && (
+            <PlatformSyncButton
+              platform={syncPlatform}
+              clientId={clientId}
+              className="shrink-0"
+            />
+          )}
         </div>
 
         <TabsContent value="instagram" className="mt-4">
