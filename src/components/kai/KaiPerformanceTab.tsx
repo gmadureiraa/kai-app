@@ -16,6 +16,7 @@ import { Client } from "@/hooks/useClients";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { useSyncLateMetrics } from "@/hooks/useSyncLateMetrics";
+import { AutoSyncStatus } from "@/components/performance/AutoSyncStatus";
 import { cn } from "@/lib/utils";
 
 interface KaiPerformanceTabProps {
