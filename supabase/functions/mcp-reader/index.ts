@@ -822,6 +822,13 @@ mcpServer.tool("publish_content", {
     };
     if (args.scheduled_for) body.scheduledFor = args.scheduled_for;
     if (Object.keys(platformOptions).length) body.platformOptions = platformOptions;
+    if (Array.isArray(args.thread_items) && args.thread_items.length > 0) {
+      body.threadItems = args.thread_items.map((t: any, i: number) => ({
+        id: t.id || `tw-${i}`,
+        text: String(t.text || ""),
+        media_urls: Array.isArray(t.media_urls) ? t.media_urls : [],
+      }));
+    }
 
     try {
       const resp = await fetch(`${SUPABASE_URL}/functions/v1/late-post`, {
