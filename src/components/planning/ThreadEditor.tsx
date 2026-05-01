@@ -17,9 +17,12 @@ interface ThreadEditorProps {
   onChange: (tweets: ThreadTweet[]) => void;
   clientId?: string;
   className?: string;
+  /** Plataformas-alvo. Define o limite de chars: Threads=500, X=280. Se ambas, usa o menor (280). */
+  targetPlatforms?: string[];
 }
 
-const MAX_TWEET_LENGTH = 280;
+const X_MAX = 280;
+const THREADS_MAX = 500;
 
 export function ThreadEditor({
   value,
