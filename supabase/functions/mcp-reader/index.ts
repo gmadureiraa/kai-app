@@ -750,6 +750,8 @@ mcpServer.tool("publish_content", {
     if (Array.isArray(args.instagram_collaborators)) ig.collaborators = args.instagram_collaborators;
     if (args.instagram_first_comment) ig.firstComment = args.instagram_first_comment;
     if (args.instagram_thumbnail_url) ig.instagramThumbnail = args.instagram_thumbnail_url;
+    if (typeof args.instagram_thumb_offset === "number") ig.thumbOffset = args.instagram_thumb_offset;
+    if (args.instagram_audio_name) ig.audioName = args.instagram_audio_name;
     if (args.instagram_caption_override) ig.customCaption = args.instagram_caption_override;
     if (Object.keys(ig).length) platformOptions.instagram = ig;
 
