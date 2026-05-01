@@ -754,7 +754,7 @@ mcpServer.tool("create_viral_carousel", {
 });
 
 mcpServer.tool("publish_content", {
-  description: "Publish or schedule content to a connected social platform via Zernio (Late). Supports Instagram Stories, Reels (including TRIAL REELS shown only to non-followers), Carousels, Facebook Stories/Reels, plus collaborators and first comment. Use 'instagram_content_type' to choose feed/story/reel/carousel. Set 'instagram_trial_reel' to 'manual' or 'auto' to publish as a Trial Reel.",
+  description: "Publish or schedule content to a connected social platform via Zernio (Late). Supports: Instagram Stories/Reels (incl. TRIAL REELS shown only to non-followers)/Carousels, Facebook Stories/Reels, and THREADS for both X (Twitter) and Threads (Meta). For threads, set platform='twitter' or 'threads' and pass 'thread_items' (array of posts, each with text + own media_urls). To publish the same thread on BOTH X and Threads, call this tool TWICE — once per platform — with the same thread_items.",
   inputSchema: {
     type: "object" as const,
     properties: {
